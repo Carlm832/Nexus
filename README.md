@@ -1,99 +1,202 @@
-# Nexus
+<div align="center">
+  <img src="public/nexus-logo.svg" alt="Nexus" height="60" />
+  <br /><br />
+  <p><strong>Research Intelligence Platform</strong></p>
+  <p>Surfaces peer-reviewed science across six disciplines — synthesised, searchable, and ready to read.</p>
 
-Nexus is a **research discovery + summarization** app.
+  ![License](https://img.shields.io/badge/license-MIT-blue)
+  ![Node](https://img.shields.io/badge/node-18%2B-brightgreen)
+  ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)
+  ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite)
+</div>
 
-- **Frontend**: Vite + React (runs on `http://localhost:5173`)
-- **Backend**: Node + Express API (runs on `http://localhost:3001`)
+---
 
-## Prerequisites
+## What is Nexus?
 
-- **Node.js**: recommended **18+**
-- **npm**: comes with Node (this repo uses npm commands below)
+Nexus aggregates peer-reviewed research papers from [OpenAlex](https://openalex.org) (250M+ scientific records) and uses the Gemini AI API to produce plain-English summaries, significance notes, and evidence-level ratings. Papers are narrated on demand via ElevenLabs text-to-speech.
 
-## Quickstart (Frontend)
+**Disciplines covered:** Neuroscience · Artificial Intelligence · Climate Science · Economics · Biology · Psychology
 
-From the repo root:
+**Key rules enforced automatically:**
+- No forthcoming or future-dated papers
+- No preprints or pre-review work
+- Only papers with a full abstract are ingested
+
+---
+
+## Features
+
+| Feature | Detail |
+|---|---|
+| 🔍 **Live search** | Filters title, abstract, and authors in real time |
+| 🗂 **Discipline filters** | One-click chips for all six disciplines |
+| 📊 **Sort options** | Newest · Most cited · Evidence level |
+| 🔖 **Bookmarks** | Save papers locally; dedicated saved list view |
+| 🔊 **Audio narration** | On-demand MP3 generation per paper |
+| 📋 **Citation export** | APA, MLA, Chicago, BibTeX, RIS |
+| 🔗 **Deep links** | Shareable `?paper=<id>` URLs |
+| ⌨️ **Keyboard shortcuts** | `/` focuses search · `Esc` closes modals |
+| 🌙 **Dark mode** | Persisted via localStorage |
+
+---
+
+## Architecture
+
+```
+Nexus/
+├── src/                    # React frontend (Vite)
+│   ├── App.jsx             # Main shell — routing, state, search/sort
+│   ├── components/
+│   │   ├── ResearchCard    # Feed card with discipline badge
+│   │   ├── ArticleView     # Full article + audio player + citation modal
+│   │   ├── AuthModal       # Sign-in / sign-up dialog
+│   │   ├── CurationModal   # Discipline preference selector
+│   │   └── SubmitModal     # Submit a paper by DOI
+│   └── data/mockData.js    # Offline fallback (mirrors database.json)
+│
+├── backend/
+│   ├── src/
+│   │   ├── index.js        # Express API server (port 3001)
+│   │   ├── scripts/
+│   │   │   └── ingest.js   # Bulk ingestion pipeline
+│   │   └── services/
+│   │       ├── openalex.js # OpenAlex API client
+│   │       ├── crossref.js # Crossref API client + normalizer
+│   │       ├── llm.js      # Gemini AI synthesis
+│   │       └── tts.js      # ElevenLabs text-to-speech
+│   └── data/
+│       └── database.json   # Ingested paper store
+│
+└── public/
+    ├── nexus-icon.svg      # Favicon
+    └── nexus-logo.svg      # Full wordmark (navbar)
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- **Node.js 18+**
+- API keys for **Google Gemini** and **ElevenLabs** (optional — the app runs without them in offline mode)
+
+### 1 · Install dependencies
 
 ```bash
+# Frontend
 npm install
+
+# Backend
+cd backend && npm install && cd ..
+```
+
+### 2 · Configure environment variables
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+Edit `backend/.env`:
+
+```env
+GEMINI_API_KEY=your_gemini_api_key
+ELEVENLABS_API_KEY=your_elevenlabs_api_key
+ELEVENLABS_VOICE_ID=your_voice_id   # optional — defaults to a preset
+```
+
+### 3 · Run
+
+**Frontend only** (uses the 17-paper offline cache):
+```bash
 npm run dev
 ```
 
-Build and preview:
-
+**Frontend + Backend** (live API, all features):
 ```bash
-npm run build
-npm run preview
-```
-
-## Quickstart (Backend API)
-
-In a second terminal:
-
-```bash
-cd backend
-npm install
+# Terminal 1
 npm run dev
+
+# Terminal 2
+npm run server
 ```
 
-The backend serves:
+Open **http://localhost:5173**
 
-- `GET /api/papers` — list ingested papers
-- `POST /api/submit` — submit a DOI for ingestion
-- `GET /api/audio/<file>.mp3` — generated audio files
+---
 
-The ingestion pipeline currently targets these disciplines:
+## API Reference
 
-- `Neuroscience`
-- `Psychology`
-- `Economics`
-- `Biology`
-- `Artificial Intelligence`
-- `Climate Science`
+The backend runs on `http://localhost:3001`. The Vite dev server proxies all `/api` calls automatically.
 
-## Frontend ↔ Backend connection
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/papers` | List all published, peer-reviewed papers |
+| `GET` | `/api/papers?discipline=Neuroscience` | Filter by discipline |
+| `GET` | `/api/papers?search=alzheimer` | Full-text search |
+| `POST` | `/api/submit` | Submit a DOI for ingestion `{ doi }` |
+| `POST` | `/api/papers/:id/audio` | Generate audio narration for a paper |
+| `GET` | `/api/audio/:file.mp3` | Stream a generated audio file |
 
-Today the frontend calls the backend at `http://localhost:3001`.
+---
 
-In the next steps of this repo’s setup we standardize this with an env var:
+## Ingestion Pipeline
 
-- **`VITE_API_BASE_URL`** (example: `http://localhost:3001`)
-
-See [`docs/environment-variables.md`](docs/environment-variables.md).
-
-## Environment variables and secrets
-
-- Backend reads secrets from `backend/.env` (local-only; **do not commit**).
-- Use [`backend/.env.example`](backend/.env.example) as a starting point.
-- Run `npm run check:apis` inside `backend` to verify Gemini and ElevenLabs configuration.
-- ElevenLabs free-tier API access requires a generated/default voice you own; premade/library voices can return payment or authorization errors.
-
-## Common tasks
-
-- **Lint**:
+To expand the database with fresh papers from OpenAlex:
 
 ```bash
-npm run lint
+npm run ingest
+# or with a custom limit per discipline:
+node backend/src/scripts/ingest.js 10
 ```
 
-## Troubleshooting
+The pipeline:
+1. Queries OpenAlex for each discipline (filtered: published, English, has abstract, not a preprint)
+2. Reconstructs full-text abstracts from OpenAlex's inverted index format
+3. Sends each paper to Gemini for synthesis (summary, significance, limitations, evidence level, tags)
+4. Falls back to structured rule-based synthesis if Gemini quota is unavailable
+5. Deduplicates against existing entries before writing to `database.json`
 
-- **Frontend loads but no live data**: if the backend isn’t running, the UI falls back to mock data.
-- **CORS errors**: ensure the backend is running on `3001` and the frontend on `5173`.
+---
 
-## React + Vite
+## Scripts
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+| Command | Description |
+|---|---|
+| `npm run dev` | Start Vite frontend dev server |
+| `npm run server` | Start Express backend API |
+| `npm run ingest` | Run the OpenAlex ingestion pipeline |
+| `npm run build` | Production build to `dist/` |
+| `npm run test` | Run Vitest unit tests |
+| `npm run lint` | ESLint check |
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Verification
 
-## React Compiler
+```bash
+# Check all API connections (Gemini + ElevenLabs)
+cd backend && node src/scripts/checkApis.js
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+# Run unit tests
+npm run test
+```
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `GEMINI_API_KEY` | For synthesis | Google Gemini API key |
+| `ELEVENLABS_API_KEY` | For audio | ElevenLabs API key |
+| `ELEVENLABS_VOICE_ID` | Optional | Custom voice ID (defaults to preset) |
+| `VITE_API_BASE_URL` | Optional | Override API base URL (defaults to Vite proxy) |
+| `PORT` | Optional | Backend port (default: `3001`) |
+
+---
+
+## License
+
+MIT
