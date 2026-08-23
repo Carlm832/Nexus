@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Amber/gold connection lines from center -->
+  <line x1="50" y1="50" x2="18" y2="19" stroke="#E8A020" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="50" y1="50" x2="52" y2="13" stroke="#E8A020" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="50" y1="50" x2="82" y2="21" stroke="#E8A020" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="50" y1="50" x2="87" y2="54" stroke="#E8A020" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="50" y1="50" x2="76" y2="81" stroke="#E8A020" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="50" y1="50" x2="22" y2="78" stroke="#E8A020" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="50" y1="50" x2="14" y2="52" stroke="#E8A020" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Satellite nodes -->
+  <!-- Upper-left large navy -->
+  <circle cx="18" cy="19" r="8" fill="#0A1628"/>
+  <!-- Upper-center small slate -->
+  <circle cx="52" cy="13" r="5" fill="#4A6FA5"/>
+  <!-- Upper-right large slate -->
+  <circle cx="82" cy="21" r="7" fill="#4A6FA5"/>
+  <!-- Right small slate -->
+  <circle cx="87" cy="54" r="5" fill="#4A6FA5"/>
+  <!-- Lower-right large navy -->
+  <circle cx="76" cy="81" r="7.5" fill="#0A1628"/>
+  <!-- Lower-left medium slate -->
+  <circle cx="22" cy="78" r="6" fill="#4A6FA5"/>
+  <!-- Left small slate -->
+  <circle cx="14" cy="52" r="4.5" fill="#4A6FA5"/>
+
+  <!-- Central hub ring -->
+  <circle cx="50" cy="50" r="11" fill="#0A1628"/>
+  <circle cx="50" cy="50" r="6.5" fill="white"/>
+</svg>

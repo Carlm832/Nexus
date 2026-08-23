@@ -1,0 +1,22 @@
+{
+    "name": "nexus-backend",
+    "version": "1.0.0",
+    "description": "Backend API and data ingestion pipeline for Nexus research platform",
+    "main": "src/index.js",
+    "scripts": {
+        "start": "node src/index.js",
+        "dev": "nodemon src/index.js",
+        "ingest": "node src/scripts/ingest.js",
+        "check:apis": "node src/scripts/checkApis.js"
+    },
+    "dependencies": {
+        "@google/genai": "^1.43.0",
+        "axios": "^1.6.8",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.5",
+        "express": "^4.19.2"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.0"
+    }
+}
