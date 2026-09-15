@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './ArticleView.css';
+import { formatAPA, formatBibTeX, formatMLA } from '../utils/citationHelper';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? '';
 
@@ -592,7 +593,6 @@ const PaperChat = ({ article }) => {
 /* =========================================================================
  * ArticleView Main Component
  * ========================================================================= */
-import { formatAPA, formatBibTeX, formatMLA } from '../utils/citationHelper';
 
 export default function ArticleView({
     article,
