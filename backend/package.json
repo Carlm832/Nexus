@@ -7,14 +7,18 @@
         "start": "node src/index.js",
         "dev": "nodemon src/index.js",
         "ingest": "node src/scripts/ingest.js",
+        "add:doi": "node src/scripts/addDoi.js",
         "check:apis": "node src/scripts/checkApis.js"
     },
     "dependencies": {
         "@google/genai": "^1.43.0",
+        "@supabase/supabase-js": "^2.116.0",
         "axios": "^1.6.8",
         "cors": "^2.8.5",
         "dotenv": "^16.4.5",
-        "express": "^4.19.2"
+        "express": "^4.19.2",
+        "express-rate-limit": "^8.7.0",
+        "helmet": "^8.3.0"
     },
     "devDependencies": {
         "nodemon": "^3.1.0"

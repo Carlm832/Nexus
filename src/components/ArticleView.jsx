@@ -3,15 +3,6 @@ import './ArticleView.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? '';
 
-const DISCIPLINE_ICONS = {
-    'Neuroscience': '🧠',
-    'Economics': '📊',
-    'Biology': '🧬',
-    'Artificial Intelligence': '⚡',
-    'Climate Science': '🌍',
-    'Psychology': '💭'
-};
-
 /* =========================================================================
  * AudioPlayer Component
  * 
@@ -28,11 +19,21 @@ const AudioPlayer = ({ article, isAuthenticated, onAuthRequest }) => {
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [playbackRate, setPlaybackRate] = useState(1);
-    const [speechProgress, setSpeechProgress] = useState(0);
+    const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+    const [audioError, setAudioError] = useState(null);
+    const [localAudioUrl, setLocalAudioUrl] = useState(article.audioUrl || null);
+
+    useEffect(() => {
+        setLocalAudioUrl(article.audioUrl || null);
+        setIsPlaying(false);
+        setCurrentTime(0);
+        setIsGeneratingAudio(false);
+        setAudioError(null);
+    }, [article.id, article.audioUrl]);
 
     // Resolve audio URL safely
-    const resolvedAudioSrc = article.audioUrl
-        ? (article.audioUrl.startsWith('http') ? article.audioUrl : `${API_BASE_URL}${article.audioUrl}`)
+    const resolvedAudioSrc = localAudioUrl
+        ? (localAudioUrl.startsWith('http') ? localAudioUrl : `${API_BASE_URL}${localAudioUrl}`)
         : null;
 
     const formatTime = (timeInSeconds) => {
@@ -42,53 +43,55 @@ const AudioPlayer = ({ article, isAuthenticated, onAuthRequest }) => {
         return `${m}:${s < 10 ? '0' : ''}${s}`;
     };
 
+    const generateAndPlayElevenLabs = async () => {
+        setIsGeneratingAudio(true);
+        setAudioError(null);
+
+        try {
+            const paperId = article.id || article.doi;
+            const res = await fetch(`${API_BASE_URL}/api/papers/${encodeURIComponent(paperId)}/audio`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paper: article })
+            });
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || `Audio generation failed (${res.status})`);
+            }
+
+            const data = await res.json();
+            if (data.audioUrl) {
+                setLocalAudioUrl(data.audioUrl);
+                article.audioUrl = data.audioUrl;
+                // Wait for audio element to load new source
+                setTimeout(() => {
+                    if (audioRef.current) {
+                        audioRef.current.play().then(() => setIsPlaying(true)).catch(console.warn);
+                    }
+                }, 300);
+            }
+        } catch (err) {
+            console.error('ElevenLabs generation error:', err);
+            setAudioError(err.message);
+        } finally {
+            setIsGeneratingAudio(false);
+        }
+    };
+
     const togglePlay = () => {
         if (resolvedAudioSrc && audioRef.current) {
             if (isPlaying) {
                 audioRef.current.pause();
                 setIsPlaying(false);
             } else {
-                audioRef.current.play().catch(err => {
+                audioRef.current.play().then(() => setIsPlaying(true)).catch(err => {
                     console.warn("Audio playback error:", err);
                 });
-                setIsPlaying(true);
             }
         } else {
-            if (!('speechSynthesis' in window)) {
-                alert("Speech synthesis is not supported in this browser.");
-                return;
-            }
-
-            if (isPlaying) {
-                window.speechSynthesis.cancel();
-                setIsPlaying(false);
-                setSpeechProgress(0);
-            } else {
-                const textToRead = `${article.title}. Summary: ${article.summary} Why it matters: ${article.significance}`;
-                const utterance = new SpeechSynthesisUtterance(textToRead);
-                utterance.rate = playbackRate;
-                
-                utterance.onboundary = (e) => {
-                    if (textToRead.length > 0) {
-                        const progress = Math.min(100, Math.round((e.charIndex / textToRead.length) * 100));
-                        setSpeechProgress(progress);
-                    }
-                };
-
-                utterance.onend = () => {
-                    setIsPlaying(false);
-                    setSpeechProgress(0);
-                };
-
-                utterance.onerror = () => {
-                    setIsPlaying(false);
-                    setSpeechProgress(0);
-                };
-
-                window.speechSynthesis.cancel();
-                window.speechSynthesis.speak(utterance);
-                setIsPlaying(true);
-            }
+            // Paper doesn't have an audio file yet -> Generate on-demand with ElevenLabs!
+            generateAndPlayElevenLabs();
         }
     };
 
@@ -140,17 +143,7 @@ const AudioPlayer = ({ article, isAuthenticated, onAuthRequest }) => {
         }
     };
 
-    useEffect(() => {
-        return () => {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-            }
-        };
-    }, []);
-
-    const progressPercent = resolvedAudioSrc
-        ? (duration > 0 ? (currentTime / duration) * 100 : 0)
-        : speechProgress;
+    const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
     return (
         <div className="audio-player editorial-card animate-fade-in">
@@ -170,18 +163,25 @@ const AudioPlayer = ({ article, isAuthenticated, onAuthRequest }) => {
             <div className="player-main-row">
                 <button
                     type="button"
-                    className={`play-btn ${isPlaying ? 'playing' : ''}`}
+                    className={`play-btn ${isPlaying ? 'playing' : ''} ${isGeneratingAudio ? 'generating' : ''}`}
                     onClick={togglePlay}
-                    aria-label={isPlaying ? 'Pause narration' : 'Play narrated synthesis'}
-                    title={isPlaying ? 'Pause' : 'Listen to Synthesis'}
+                    disabled={isGeneratingAudio}
+                    aria-label={isPlaying ? 'Pause narration' : 'Play ElevenLabs narrated synthesis'}
+                    title={isGeneratingAudio ? 'Generating ElevenLabs studio audio...' : isPlaying ? 'Pause' : 'Listen with ElevenLabs Studio Voice'}
                 >
-                    {isPlaying ? '⏸' : '▶'}
+                    {isGeneratingAudio ? '⚡' : isPlaying ? '⏸' : '▶'}
                 </button>
 
                 <div className="player-timeline-container">
                     <div className="player-labels">
                         <span className="audio-mode-label">
-                            {resolvedAudioSrc ? '🎧 AI Studio Narration' : '🔊 Web Speech Synthesis'}
+                            {isGeneratingAudio ? (
+                                <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>Generating ElevenLabs Studio Voice...</span>
+                            ) : resolvedAudioSrc ? (
+                                <span>ElevenLabs Studio Voice</span>
+                            ) : (
+                                <span>ElevenLabs Narration (Click Play to Listen)</span>
+                            )}
                         </span>
                         {resolvedAudioSrc && (
                             <span className="time-display">
@@ -204,7 +204,7 @@ const AudioPlayer = ({ article, isAuthenticated, onAuthRequest }) => {
                             />
                         ) : (
                             <div className="fallback-progress-bar">
-                                <div className="fallback-progress-fill" style={{ width: `${progressPercent}%` }}></div>
+                                <div className={`fallback-progress-fill ${isGeneratingAudio ? 'generating-pulse' : ''}`} style={{ width: isGeneratingAudio ? '100%' : '0%' }}></div>
                             </div>
                         )}
                     </div>
@@ -232,7 +232,7 @@ const AudioPlayer = ({ article, isAuthenticated, onAuthRequest }) => {
                             title={isAuthenticated ? 'Download MP3' : 'Sign in to download MP3'}
                             aria-label="Download audio narration"
                         >
-                            ↓ MP3
+                            Download MP3
                         </button>
                     )}
                 </div>
@@ -292,7 +292,7 @@ const CitationModal = ({ article, isOpen, onClose }) => {
                                         className="copy-citation-btn"
                                         onClick={() => handleCopy(format, text)}
                                     >
-                                        {copiedFormat === format ? '✓ Copied!' : 'Copy'}
+                                        {copiedFormat === format ? 'Copied' : 'Copy'}
                                     </button>
                                 </div>
                                 <pre className="citation-text-box">{text}</pre>
@@ -306,8 +306,294 @@ const CitationModal = ({ article, isOpen, onClose }) => {
 };
 
 /* =========================================================================
+ * PaperChat Component ("Ask the Paper")
+ * ========================================================================= */
+const SUGGESTED_QUESTIONS = [
+    { label: "Explain like I'm 5", q: "Can you explain this research in simple, engaging terms like I am 5 years old?" },
+    { label: "Core Methodology", q: "What methodology, study design, and sample size were used in this study?" },
+    { label: "Practical Impact", q: "What are the tangible real-world applications and implications of these findings?" },
+    { label: "Major Limitations", q: "What are the primary methodological limitations or boundary conditions noted in this work?" },
+    { label: "Key Finding", q: "What is the single most important or novel takeaway from this research?" }
+];
+
+function renderFormattedText(text) {
+    const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
+    return parts.map((part, index) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+            return <strong key={index}>{part.slice(2, -2)}</strong>;
+        }
+        if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+            return <em key={index}>{part.slice(1, -1)}</em>;
+        }
+        return part;
+    });
+}
+
+const FormattedChatContent = ({ content }) => {
+    const lines = content.split('\n');
+    return (
+        <div className="chat-markdown-body">
+            {lines.map((line, idx) => {
+                if (line.startsWith('### ')) {
+                    return <h5 key={idx} className="chat-heading">{line.replace('### ', '')}</h5>;
+                }
+                if (line.startsWith('- ') || line.startsWith('* ')) {
+                    const clean = line.substring(2);
+                    return (
+                        <div key={idx} className="chat-bullet-item">
+                            <span className="bullet-dot">•</span>
+                            <span>{renderFormattedText(clean)}</span>
+                        </div>
+                    );
+                }
+                if (!line.trim()) {
+                    return <div key={idx} style={{ height: '0.4rem' }} />;
+                }
+                return <p key={idx} className="chat-paragraph">{renderFormattedText(line)}</p>;
+            })}
+        </div>
+    );
+};
+
+function generateClientFallbackAnswer(paper, question) {
+    const q = (question || '').toLowerCase();
+
+    if (q.includes('limit') || q.includes('flaw') || q.includes('weakness')) {
+        return `**Methodology & Limitations:**\n\n${paper.limitations || 'The authors highlighted standard methodological and contextual constraints.'}\n\n- **Study Design:** ${paper.metrics?.studyType || 'Empirical'}\n- **Evidence Level:** ${paper.metrics?.evidenceLevel || 'Moderate'}`;
+    }
+
+    if (q.includes('impact') || q.includes('matter') || q.includes('significan') || q.includes('apply') || q.includes('real world')) {
+        return `**Real-World Significance:**\n\n${paper.significance || 'This study provides empirical benchmarks advancing current scientific knowledge.'}\n\n- **Field:** ${paper.discipline}\n- **Journal:** ${paper.journal}`;
+    }
+
+    if (q.includes('5') || q.includes('simple') || q.includes('eli5') || q.includes('kid')) {
+        return `**Simple Explanation:**\n\nImagine scientists wanted to understand **${(paper.tags || [])[0] || paper.discipline}**. They tested this and found that **${paper.summary}**\n\nIn short: it helps us understand how things work in the real world!`;
+    }
+
+    if (q.includes('method') || q.includes('sample') || q.includes('how did they')) {
+        return `**Methodological Framework:**\n\n- **Type:** ${paper.metrics?.studyType || 'Observational'}\n- **Evidence Level:** ${paper.metrics?.evidenceLevel || 'Moderate'}\n- **Summary of Methods:** ${paper.summary}\n- **Key Disciplinary Focus:** ${paper.discipline}`;
+    }
+
+    return `**Grounded Synthesis for "${paper.title}":**\n\n${paper.summary}\n\n**Significance:** ${paper.significance}\n\n*Published in ${paper.journal} by ${(paper.authors || []).join(', ')}.*`;
+}
+
+const PaperChat = ({ article }) => {
+    const [messages, setMessages] = useState([
+        {
+            id: 'welcome',
+            role: 'assistant',
+            content: `Hello! I'm your research assistant for **"${article.title}"**.\n\nAsk me anything about this study's methodology, real-world impact, findings, or terminology.`,
+            timestamp: new Date()
+        }
+    ]);
+    const [input, setInput] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [copiedId, setCopiedId] = useState(null);
+    const messagesEndRef = useRef(null);
+    const inputRef = useRef(null);
+
+    const scrollToBottom = () => {
+        if (typeof messagesEndRef.current?.scrollIntoView === 'function') {
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages, isLoading]);
+
+    const handleCopyAnswer = (id, text) => {
+        navigator.clipboard.writeText(text).then(() => {
+            setCopiedId(id);
+            setTimeout(() => setCopiedId(null), 2000);
+        });
+    };
+
+    const handleSend = async (questionText) => {
+        const q = (questionText || input).trim();
+        if (!q || isLoading) return;
+
+        const userMsg = {
+            id: `user-${Date.now()}`,
+            role: 'user',
+            content: q,
+            timestamp: new Date()
+        };
+
+        const updatedHistory = [...messages, userMsg];
+        setMessages(updatedHistory);
+        setInput('');
+        setIsLoading(true);
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/papers/${encodeURIComponent(article.id)}/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    question: q,
+                    history: updatedHistory.slice(1),
+                    paper: article
+                })
+            });
+
+            if (!res.ok) {
+                throw new Error(`Server returned ${res.status}`);
+            }
+
+            const data = await res.json();
+            const assistantMsg = {
+                id: `ai-${Date.now()}`,
+                role: 'assistant',
+                content: data.answer || "I couldn't generate a response for this query.",
+                timestamp: new Date()
+            };
+            setMessages(prev => [...prev, assistantMsg]);
+        } catch (err) {
+            console.warn("Using offline fallback chat:", err.message);
+            const fallbackAnswer = generateClientFallbackAnswer(article, q);
+            const assistantMsg = {
+                id: `ai-${Date.now()}`,
+                role: 'assistant',
+                content: fallbackAnswer,
+                timestamp: new Date()
+            };
+            setMessages(prev => [...prev, assistantMsg]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleClearChat = () => {
+        setMessages([
+            {
+                id: 'welcome',
+                role: 'assistant',
+                content: `Chat cleared. Ask a new question about **"${article.title}"** below.`,
+                timestamp: new Date()
+            }
+        ]);
+    };
+
+    return (
+        <div className="paper-chat-container">
+            <div className="chat-header-row">
+                <div className="chat-header-info">
+                    <span className="chat-badge">Grounded in paper</span>
+                    <span className="chat-hint">Answers cite abstract, synthesis & metrics</span>
+                </div>
+                {messages.length > 1 && (
+                    <button
+                        type="button"
+                        className="clear-chat-btn"
+                        onClick={handleClearChat}
+                        title="Clear chat history"
+                    >
+                        Reset Conversation
+                    </button>
+                )}
+            </div>
+
+            {/* Quick Starter Chips */}
+            <div className="quick-questions-wrapper">
+                <span className="quick-label">Suggested prompts:</span>
+                <div className="quick-chips-list">
+                    {SUGGESTED_QUESTIONS.map((item, i) => (
+                        <button
+                            key={i}
+                            type="button"
+                            className="quick-chip-btn"
+                            onClick={() => handleSend(item.q)}
+                            disabled={isLoading}
+                        >
+                            {item.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Message Stream */}
+            <div className="chat-messages-stream" role="log" aria-live="polite">
+                {messages.map((msg) => (
+                    <div
+                        key={msg.id}
+                        className={`chat-message-row ${msg.role === 'user' ? 'user-row' : 'assistant-row'}`}
+                    >
+                        <div className="chat-avatar" aria-hidden="true">
+                            {msg.role === 'user' ? 'You' : 'AI'}
+                        </div>
+                        <div className="chat-bubble">
+                            <div className="chat-bubble-header">
+                                <span className="sender-name">
+                                    {msg.role === 'user' ? 'You' : 'Nexus Scientific AI'}
+                                </span>
+                                {msg.role === 'assistant' && msg.id !== 'welcome' && (
+                                    <button
+                                        type="button"
+                                        className="copy-answer-btn"
+                                        onClick={() => handleCopyAnswer(msg.id, msg.content)}
+                                        title="Copy answer"
+                                        aria-label="Copy answer"
+                                    >
+                                        {copiedId === msg.id ? 'Copied' : 'Copy'}
+                                    </button>
+                                )}
+                            </div>
+                            <FormattedChatContent content={msg.content} />
+                        </div>
+                    </div>
+                ))}
+
+                {isLoading && (
+                    <div className="chat-message-row assistant-row">
+                        <div className="chat-avatar" aria-hidden="true">AI</div>
+                        <div className="chat-bubble loading-bubble">
+                            <div className="typing-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            <span className="thinking-text">Synthesizing answer from paper...</span>
+                        </div>
+                    </div>
+                )}
+                <div ref={messagesEndRef} />
+            </div>
+
+            {/* Chat Input Bar */}
+            <form
+                className="chat-input-form"
+                onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSend();
+                }}
+            >
+                <input
+                    ref={inputRef}
+                    type="text"
+                    className="chat-text-input"
+                    placeholder="Ask a question about this study (e.g. sample size, real-world impact)..."
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    disabled={isLoading}
+                />
+                <button
+                    type="submit"
+                    className="chat-send-btn"
+                    disabled={isLoading || !input.trim()}
+                    aria-label="Send question"
+                >
+                    {isLoading ? '...' : 'Send'}
+                </button>
+            </form>
+        </div>
+    );
+};
+
+/* =========================================================================
  * ArticleView Main Component
  * ========================================================================= */
+import { formatAPA, formatBibTeX, formatMLA } from '../utils/citationHelper';
+
 export default function ArticleView({
     article,
     onBack,
@@ -319,6 +605,10 @@ export default function ArticleView({
     const [activeTab, setActiveTab] = useState('summary');
     const [isCiteOpen, setIsCiteOpen] = useState(false);
     const [copiedShare, setCopiedShare] = useState(false);
+    const [isSplitView, setIsSplitView] = useState(false);
+    const [copiedFormat, setCopiedFormat] = useState(null);
+
+    const hasPdf = Boolean(article?.oaUrl || article?.pdfUrl);
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -338,7 +628,6 @@ export default function ArticleView({
 
     const cleanDoi = (article.doi || '').replace(/^https?:\/\/doi\.org\//i, '');
     const fullDoiUrl = article.doi?.startsWith('http') ? article.doi : `https://doi.org/${cleanDoi}`;
-    const discIcon = DISCIPLINE_ICONS[article.discipline] || '📄';
 
     const handleShare = () => {
         const url = new URL(window.location.href);
@@ -349,11 +638,18 @@ export default function ArticleView({
         });
     };
 
+    const handleQuickCopy = (formatName, text) => {
+        navigator.clipboard.writeText(text).then(() => {
+            setCopiedFormat(formatName);
+            setTimeout(() => setCopiedFormat(null), 2000);
+        });
+    };
+
     return (
-        <article className="article-view animate-fade-in">
+        <article className={`article-view animate-fade-in ${isSplitView && hasPdf ? 'split-layout' : ''}`}>
             <div className="article-top-nav">
                 <button type="button" className="back-btn" onClick={onBack}>
-                    &larr; Back to Feed
+                    Back to Feed
                 </button>
 
                 <div className="article-action-buttons">
@@ -363,175 +659,268 @@ export default function ArticleView({
                         onClick={() => onToggleBookmark && onToggleBookmark(article.id)}
                         title={isBookmarked ? 'Remove bookmark' : 'Bookmark paper'}
                     >
-                        {isBookmarked ? '★ Saved' : '☆ Save'}
+                        {isBookmarked ? 'Saved' : 'Save'}
                     </button>
+
                     <button
                         type="button"
                         className="action-pill-btn"
                         onClick={handleShare}
                         title="Copy shareable link to this study"
                     >
-                        {copiedShare ? '✓ Link Copied!' : '🔗 Share'}
+                        {copiedShare ? 'Link Copied' : 'Share'}
                     </button>
+
+                    {hasPdf && (
+                        <button
+                            type="button"
+                            className={`action-pill-btn ${isSplitView ? 'active-split' : ''}`}
+                            onClick={() => setIsSplitView(v => !v)}
+                            title="Toggle side-by-side AI synthesis and live PDF view"
+                        >
+                            {isSplitView ? 'Close Split PDF' : 'Split View (PDF + AI)'}
+                        </button>
+                    )}
+
+                    {article.oaUrl && (
+                        <a
+                            href={article.oaUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="action-pill-btn oa-pdf-btn"
+                            title="Open direct free Open-Access PDF in new window"
+                        >
+                            Open PDF ↗
+                        </a>
+                    )}
+
                     <button
                         type="button"
                         className="action-pill-btn primary"
                         onClick={() => setIsCiteOpen(true)}
-                        title="Generate citation"
+                        title="Generate citation in BibTeX, APA, MLA"
                     >
-                        ❝ Cite
+                        Cite
                     </button>
                 </div>
             </div>
 
-            <header className="article-header editorial-card">
-                <div className="meta-row">
-                    <span className="discipline-tag">
-                        <span style={{ marginRight: '0.35rem' }}>{discIcon}</span>
-                        {article.discipline}
-                    </span>
-                    <span className="date-text">
-                        {new Date(article.publishDate).toLocaleDateString(undefined, {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                        })}
-                    </span>
-                    <span className="journal-text">{article.journal}</span>
-                </div>
+            <div className={isSplitView && hasPdf ? 'split-view-container' : 'single-view-container'}>
+                {/* Left Column: Header, Audio, Synthesis Tabs */}
+                <div className="split-view-left">
+                    <header className="article-header editorial-card">
+                        <div className="meta-row">
+                            <span className="discipline-tag">
+                                {article.discipline}
+                            </span>
+                            <span className="date-text">
+                                {new Date(article.publishDate).toLocaleDateString(undefined, {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                })}
+                            </span>
+                            <span className="journal-text">{article.journal}</span>
+                        </div>
 
-                <h1 className="heading-serif article-title">{article.title}</h1>
-                <p className="article-authors">{(article.authors || []).join(', ')}</p>
+                        <h1 className="heading-serif article-title">{article.title}</h1>
+                        <p className="article-authors">{(article.authors || []).join(', ')}</p>
 
-                <div className="meta-pills">
-                    {cleanDoi && (
-                        <a
-                            href={fullDoiUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="pill-badge pill-neutral doi-link"
-                            title="Open original publication at publisher"
-                        >
-                            DOI: {cleanDoi} ↗
-                        </a>
-                    )}
-                    <span className="pill-badge pill-neutral">
-                        Citations: {article.metrics?.citations ?? 0}
-                    </span>
-                    <span className="pill-badge pill-neutral">
-                        Type: {article.metrics?.studyType || 'Journal Article'}
-                    </span>
-                    <span className={`pill-badge ${article.metrics?.evidenceLevel === 'High' ? 'pill-success' : 'pill-warning'}`}>
-                        Evidence: {article.metrics?.evidenceLevel || 'Preliminary'}
-                    </span>
-                    <span className={`pill-badge ${article.reviewStatus === 'preReview' ? 'pill-warning' : 'pill-neutral'}`}>
-                        {article.reviewStatus === 'preReview' ? 'Pre-print' : 'Peer-reviewed'}
-                    </span>
-                </div>
-            </header>
+                        <div className="meta-pills">
+                            {cleanDoi && (
+                                <a
+                                    href={fullDoiUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="pill-badge pill-neutral doi-link"
+                                    title="Open original publication at publisher"
+                                >
+                                    DOI: {cleanDoi} ↗
+                                </a>
+                            )}
+                            <span className="pill-badge pill-neutral">
+                                Citations: {article.metrics?.citations ?? 0}
+                            </span>
+                            <span className="pill-badge pill-neutral">
+                                Type: {article.metrics?.studyType || 'Journal Article'}
+                            </span>
+                            <span className={`pill-badge ${article.metrics?.evidenceLevel === 'High' ? 'pill-success' : 'pill-warning'}`}>
+                                Evidence: {article.metrics?.evidenceLevel || 'Preliminary'}
+                            </span>
+                            <span className={`pill-badge ${article.reviewStatus === 'preReview' ? 'pill-warning' : 'pill-neutral'}`}>
+                                {article.reviewStatus === 'preReview' ? 'Pre-print' : 'Peer-reviewed'}
+                            </span>
+                        </div>
 
-            <AudioPlayer
-                article={article}
-                isAuthenticated={isAuthenticated}
-                onAuthRequest={onAuthRequest}
-            />
+                        {/* Instant 1-Click Citation Bar */}
+                        <div className="quick-citation-row">
+                            <span className="quick-cite-label">Quick Cite:</span>
+                            <button
+                                type="button"
+                                className={`quick-cite-chip ${copiedFormat === 'APA' ? 'copied' : ''}`}
+                                onClick={() => handleQuickCopy('APA', formatAPA(article))}
+                                title="Copy APA 7th Edition citation to clipboard"
+                            >
+                                {copiedFormat === 'APA' ? 'Copied APA' : 'Copy APA'}
+                            </button>
+                            <button
+                                type="button"
+                                className={`quick-cite-chip ${copiedFormat === 'BibTeX' ? 'copied' : ''}`}
+                                onClick={() => handleQuickCopy('BibTeX', formatBibTeX(article))}
+                                title="Copy BibTeX entry to clipboard"
+                            >
+                                {copiedFormat === 'BibTeX' ? 'Copied BibTeX' : 'Copy BibTeX'}
+                            </button>
+                            <button
+                                type="button"
+                                className={`quick-cite-chip ${copiedFormat === 'MLA' ? 'copied' : ''}`}
+                                onClick={() => handleQuickCopy('MLA', formatMLA(article))}
+                                title="Copy MLA 9th Edition citation to clipboard"
+                            >
+                                {copiedFormat === 'MLA' ? 'Copied MLA' : 'Copy MLA'}
+                            </button>
+                        </div>
+                    </header>
 
-            <div className="article-content editorial-card">
-                <div className="tabs-nav">
-                    <button
-                        type="button"
-                        className={`tab-btn ${activeTab === 'summary' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('summary')}
-                    >
-                        Plain Synthesis
-                    </button>
-                    <button
-                        type="button"
-                        className={`tab-btn ${activeTab === 'significance' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('significance')}
-                    >
-                        Real-World Impact
-                    </button>
-                    <button
-                        type="button"
-                        className={`tab-btn ${activeTab === 'limitations' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('limitations')}
-                    >
-                        Methodology & Limits
-                    </button>
-                    {article.abstract && (
-                        <button
-                            type="button"
-                            className={`tab-btn ${activeTab === 'abstract' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('abstract')}
-                        >
-                            Original Abstract
-                        </button>
-                    )}
-                </div>
+                    <AudioPlayer
+                        article={article}
+                        isAuthenticated={isAuthenticated}
+                        onAuthRequest={onAuthRequest}
+                    />
 
-                <div className="tab-pane animate-fade-in">
-                    {activeTab === 'summary' && (
-                        <div className="content-block">
-                            <div className="highlight-box">
-                                <h4 className="box-heading">💡 Core Synthesis</h4>
-                                <p className="lead-paragraph">{article.summary}</p>
-                            </div>
+                    <div className="article-content editorial-card">
+                        <div className="tabs-nav">
+                            <button
+                                type="button"
+                                className={`tab-btn ${activeTab === 'summary' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('summary')}
+                            >
+                                Plain Synthesis
+                            </button>
+                            <button
+                                type="button"
+                                className={`tab-btn ${activeTab === 'significance' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('significance')}
+                            >
+                                Real-World Impact
+                            </button>
+                            <button
+                                type="button"
+                                className={`tab-btn ${activeTab === 'limitations' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('limitations')}
+                            >
+                                Methodology & Limits
+                            </button>
+                            <button
+                                type="button"
+                                className={`tab-btn ${activeTab === 'chat' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('chat')}
+                            >
+                                Ask the Paper
+                            </button>
+                            {article.abstract && (
+                                <button
+                                    type="button"
+                                    className={`tab-btn ${activeTab === 'abstract' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('abstract')}
+                                >
+                                    Original Abstract
+                                </button>
+                            )}
+                        </div>
 
-                            {article.tags && article.tags.length > 0 && (
-                                <div className="article-tags-section">
-                                    <span className="tags-label">Key Topics:</span>
-                                    <div className="tags-container">
-                                        {article.tags.map(t => (
-                                            <span key={t} className="tag">#{t}</span>
-                                        ))}
+                        <div className="tab-pane animate-fade-in">
+                            {activeTab === 'summary' && (
+                                <div className="content-block">
+                                    <div className="highlight-box">
+                                        <h4 className="box-heading">Core Synthesis</h4>
+                                        <p className="lead-paragraph">{article.summary}</p>
+                                    </div>
+
+                                    {article.tags && article.tags.length > 0 && (
+                                        <div className="article-tags-section">
+                                            <span className="tags-label">Key Topics:</span>
+                                            <div className="tags-container">
+                                                {article.tags.map(t => (
+                                                    <span key={t} className="tag">#{t}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {activeTab === 'significance' && (
+                                <div className="content-block">
+                                    <div className="highlight-box impact-box">
+                                        <h4 className="box-heading">Why It Matters</h4>
+                                        <p className="lead-paragraph">{article.significance}</p>
                                     </div>
                                 </div>
                             )}
-                        </div>
-                    )}
 
-                    {activeTab === 'significance' && (
-                        <div className="content-block">
-                            <div className="highlight-box impact-box">
-                                <h4 className="box-heading">🌍 Why It Matters</h4>
-                                <p className="lead-paragraph">{article.significance}</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'limitations' && (
-                        <div className="content-block">
-                            <div className="limitation-block">
-                                <div className="limitation-alert">
-                                    <span className="alert-icon">⚠️</span>
-                                    <strong>Methodological Context & Boundaries</strong>
-                                </div>
-                                <div className="limitation-row">
-                                    <strong>Design:</strong> {article.metrics?.studyType || 'Observational'}
-                                </div>
-                                <div className="limitation-row">
-                                    <strong>Evidence Confidence:</strong> {article.metrics?.evidenceLevel || 'Preliminary'}
-                                </div>
-                                <p className="limitation-text">{article.limitations}</p>
-                                {article.funding && (
-                                    <div className="funding-note">
-                                        <em>Funding & Disclosures: {article.funding}</em>
+                            {activeTab === 'limitations' && (
+                                <div className="content-block">
+                                    <div className="limitation-block">
+                                        <div className="limitation-alert">
+                                            <strong>Methodological Context & Boundaries</strong>
+                                        </div>
+                                        <div className="limitation-row">
+                                            <strong>Design:</strong> {article.metrics?.studyType || 'Observational'}
+                                        </div>
+                                        <div className="limitation-row">
+                                            <strong>Evidence Confidence:</strong> {article.metrics?.evidenceLevel || 'Preliminary'}
+                                        </div>
+                                        <p className="limitation-text">{article.limitations}</p>
+                                        {article.funding && (
+                                            <div className="funding-note">
+                                                <em>Funding & Disclosures: {article.funding}</em>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
+                                </div>
+                            )}
 
-                    {activeTab === 'abstract' && (
-                        <div className="content-block">
-                            <h3 className="heading-serif" style={{ fontSize: '1.25rem', marginBottom: '0.75rem' }}>
-                                Full Academic Abstract
-                            </h3>
-                            <p className="abstract-text">{article.abstract}</p>
+                            {activeTab === 'chat' && (
+                                <PaperChat article={article} />
+                            )}
+
+                            {activeTab === 'abstract' && (
+                                <div className="content-block">
+                                    <h3 className="heading-serif" style={{ fontSize: '1.25rem', marginBottom: '0.75rem' }}>
+                                        Full Academic Abstract
+                                    </h3>
+                                    <p className="abstract-text">{article.abstract}</p>
+                                </div>
+                            )}
                         </div>
-                    )}
+                    </div>
                 </div>
+
+                {/* Right Column: Embedded PDF Reader (when Split View is enabled) */}
+                {isSplitView && hasPdf && (
+                    <div className="split-view-right animate-fade-in">
+                        <div className="pdf-embed-card">
+                            <div className="pdf-embed-header">
+                                <span>Live PDF Reader ({article.journal || 'Full Document'})</span>
+                                <a
+                                    href={article.pdfUrl || article.oaUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="action-pill-btn"
+                                    title="Open PDF in a new window"
+                                >
+                                    Full Window ↗
+                                </a>
+                            </div>
+                            <iframe
+                                src={article.pdfUrl || article.oaUrl}
+                                title={`PDF Document Reader for ${article.title}`}
+                                className="pdf-iframe"
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
 
             <CitationModal
@@ -542,4 +931,5 @@ export default function ArticleView({
         </article>
     );
 }
+
 

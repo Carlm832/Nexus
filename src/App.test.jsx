@@ -17,7 +17,7 @@ describe('App', () => {
 
   it('renders the header brand and navigation', () => {
     render(<App />);
-    expect(screen.getByText('Nexus')).toBeInTheDocument();
+    expect(screen.getByAltText('Nexus')).toBeInTheDocument();
     expect(screen.getByText('Discover')).toBeInTheDocument();
     expect(screen.getByText(/Curate Feed/i)).toBeInTheDocument();
     expect(screen.getByText(/Submit Research/i)).toBeInTheDocument();
@@ -42,6 +42,21 @@ describe('App', () => {
     fireEvent.click(closeBtn);
     expect(screen.queryByText('Curate Your Feed')).not.toBeInTheDocument();
   });
+
+  it('navigates to article view and opens Ask the Paper tab', async () => {
+    render(<App />);
+    const studyTitle = screen.getByText(/Neuroplasticity in Adult Lexical Learning/i);
+    fireEvent.click(studyTitle);
+
+    expect(screen.getByText('Plain Synthesis')).toBeInTheDocument();
+    const askTab = screen.getByText(/Ask the Paper/i);
+    expect(askTab).toBeInTheDocument();
+
+    fireEvent.click(askTab);
+    expect(screen.getByText(/Grounded in paper/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Ask a question about this study/i)).toBeInTheDocument();
+  });
 });
+
 
 

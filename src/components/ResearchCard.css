@@ -25,6 +25,13 @@
     box-shadow: 0 0 0 2px var(--accent-border);
 }
 
+/* J/K keyboard navigation active highlight */
+.research-card.keyboard-focused {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px var(--accent-border), var(--shadow-md);
+    transform: translateY(-2px);
+}
+
 .card-top-row {
     display: flex;
     justify-content: space-between;
@@ -74,6 +81,40 @@
     border: 1px solid var(--accent-border);
     padding: 0.15rem 0.45rem;
     border-radius: var(--radius-sm);
+}
+
+.oa-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    padding: 0.15rem 0.45rem;
+    border-radius: var(--radius-sm);
+    letter-spacing: 0.02em;
+}
+
+.pill-ai-jit {
+    background: rgba(99, 102, 241, 0.12);
+    color: #818cf8;
+    border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.badge-med {
+    background: rgba(244, 63, 94, 0.12);
+    color: #fb7185;
+    border: 1px solid rgba(244, 63, 94, 0.25);
+}
+
+.badge-phys {
+    background: rgba(168, 85, 247, 0.12);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.25);
+}
+
+.study-type-tag {
+    color: var(--text-secondary);
+    border-color: var(--border-medium);
 }
 
 .card-bookmark-btn {

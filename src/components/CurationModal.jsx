@@ -1,15 +1,6 @@
 import React, { useEffect } from 'react';
 import './CurationModal.css';
-import { disciplines } from '../data/mockData';
-
-const DISCIPLINE_ICONS = {
-    'Neuroscience': '🧠',
-    'Economics': '📊',
-    'Biology': '🧬',
-    'Artificial Intelligence': '⚡',
-    'Climate Science': '🌍',
-    'Psychology': '💭'
-};
+import { disciplines, ACADEMIC_DOMAINS } from '../data/taxonomy';
 
 export default function CurationModal({ isOpen, onClose, selectedDisciplines, toggleDiscipline }) {
     useEffect(() => {
@@ -47,7 +38,6 @@ export default function CurationModal({ isOpen, onClose, selectedDisciplines, to
                     <div className="discipline-grid">
                         {disciplines.map(disc => {
                             const isSelected = selectedDisciplines.includes(disc);
-                            const icon = DISCIPLINE_ICONS[disc] || '📄';
                             return (
                                 <button
                                     key={disc}
@@ -56,17 +46,16 @@ export default function CurationModal({ isOpen, onClose, selectedDisciplines, to
                                     onClick={() => toggleDiscipline(disc)}
                                 >
                                     <span className="disc-chip-label">
-                                        <span style={{ marginRight: '0.4rem' }}>{icon}</span>
                                         {disc}
                                     </span>
-                                    {isSelected ? <span className="check-icon">✓</span> : <span className="plus-icon">+</span>}
+                                    {isSelected ? <span className="check-icon">Selected</span> : <span className="plus-icon">Add</span>}
                                 </button>
                             );
                         })}
                     </div>
 
                     <div className="adjacent-fields">
-                        <h4>💡 Recommended Interdisciplinary Connections</h4>
+                        <h4>Recommended Interdisciplinary Connections</h4>
                         <p>Exploring <strong>Neuroscience</strong> alongside <strong>Artificial Intelligence</strong> and <strong>Cognitive Psychology</strong> reveals cutting-edge neural computation discoveries.</p>
                     </div>
                 </div>

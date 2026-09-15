@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './SubmitModal.css';
+import { supabase } from '../lib/supabase';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? '';
 
@@ -30,16 +31,24 @@ export default function SubmitModal({ isOpen, onClose, onPaperAdded }) {
         setError(null);
 
         try {
+            const headers = { 'Content-Type': 'application/json' };
+            if (supabase) {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.access_token) {
+                    headers['Authorization'] = `Bearer ${session.access_token}`;
+                }
+            }
+
             const response = await fetch(`${API_BASE_URL}/api/submit`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({ doi: doi.trim() })
             });
 
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to submit paper');
+                throw new Error(data.message || data.error || 'Failed to submit paper');
             }
 
             setMessage('Paper successfully analyzed and added to Nexus!');

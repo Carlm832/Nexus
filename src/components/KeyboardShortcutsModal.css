@@ -1,0 +1,81 @@
+/* =========================================================================
+ * Keyboard Shortcuts Modal (KeyboardShortcutsModal.css)
+ * Solid high-contrast editorial styling (Strictly zero glassmorphism)
+ * ========================================================================= */
+
+.shortcuts-modal-box {
+    max-width: 520px;
+    width: 100%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-elevated);
+    z-index: 10;
+    overflow: hidden;
+}
+
+.shortcuts-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: var(--spacing-6);
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+}
+
+.shortcuts-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.shortcuts-subtitle {
+    font-size: 0.8125rem;
+    color: var(--text-tertiary);
+}
+
+.shortcuts-list {
+    padding: var(--spacing-4) var(--spacing-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+}
+
+.shortcut-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.55rem 0.75rem;
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+}
+
+.shortcut-desc {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.shortcut-kbd {
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-strong);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.shortcuts-modal-footer {
+    padding: var(--spacing-4) var(--spacing-6);
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: flex-end;
+    background: var(--bg-surface);
+}

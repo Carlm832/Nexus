@@ -1,0 +1,370 @@
+/* =========================================================================
+ * Researcher Account & Library Dashboard (AccountModal.css)
+ * Solid high-contrast editorial styling (Strictly zero glassmorphism)
+ * ========================================================================= */
+
+.account-modal-container {
+    width: 100%;
+    max-width: 780px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-elevated);
+    z-index: 10;
+    overflow: hidden;
+}
+
+.account-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-6);
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+}
+
+.account-user-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-4);
+}
+
+.account-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-full);
+    background: var(--accent-primary);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 1.125rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+}
+
+.account-user-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.2rem;
+}
+
+.account-user-subtitle {
+    font-size: 0.8125rem;
+    color: var(--text-tertiary);
+    font-weight: 500;
+}
+
+/* Tabs Bar */
+.account-tabs-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-elevated);
+    overflow-x: auto;
+}
+
+.account-tab-btn {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: var(--spacing-3) var(--spacing-5);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.account-tab-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-surface);
+}
+
+.account-tab-btn.active {
+    color: var(--accent-primary);
+    border-bottom-color: var(--accent-primary);
+    background: var(--bg-surface);
+}
+
+/* Tab Content Area */
+.account-tab-content {
+    padding: var(--spacing-6);
+    overflow-y: auto;
+    max-height: calc(88vh - 180px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-5);
+    background: var(--bg-surface);
+}
+
+/* Form Grid */
+.account-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-4);
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-2);
+}
+
+.form-hint {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    margin-bottom: var(--spacing-3);
+}
+
+.form-input,
+.form-select {
+    width: 100%;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    padding: 0.6rem 0.85rem;
+    border-radius: var(--radius-md);
+    font-size: 0.9375rem;
+    outline: none;
+    transition: border-color var(--transition-fast);
+    font-family: inherit;
+}
+
+.form-input:focus,
+.form-select:focus {
+    border-color: var(--accent-primary);
+}
+
+/* Interests Grid */
+.interests-chip-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-2);
+}
+
+.interest-chip {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.interest-chip:hover {
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+}
+
+.interest-chip.selected {
+    background: var(--accent-primary);
+    color: #ffffff;
+    border-color: var(--accent-primary);
+}
+
+/* Library and History List */
+.library-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: var(--spacing-3);
+    border-bottom: 1px solid var(--border-subtle);
+    gap: var(--spacing-4);
+    flex-wrap: wrap;
+}
+
+.section-heading {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.2rem;
+}
+
+.section-subheading {
+    font-size: 0.8125rem;
+    color: var(--text-tertiary);
+}
+
+.export-bibtex-btn {
+    background: var(--accent-primary);
+    color: #ffffff;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.export-bibtex-btn:hover {
+    background: var(--accent-primary-hover);
+}
+
+.library-papers-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-3);
+}
+
+.library-paper-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-4);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    gap: var(--spacing-4);
+    transition: border-color var(--transition-fast);
+}
+
+.library-paper-row:hover {
+    border-color: var(--border-strong);
+}
+
+.library-paper-info {
+    flex: 1;
+}
+
+.library-paper-disc {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: block;
+    margin-bottom: 0.2rem;
+}
+
+.library-paper-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    cursor: pointer;
+    line-height: 1.4;
+}
+
+.library-paper-title:hover {
+    color: var(--accent-primary);
+}
+
+.library-paper-meta {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+}
+
+.library-paper-actions {
+    display: flex;
+    gap: var(--spacing-2);
+    flex-shrink: 0;
+}
+
+.action-pill-btn.danger {
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.action-pill-btn.danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+}
+
+/* Settings Sections */
+.settings-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-3);
+}
+
+.setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-3) 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.setting-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: block;
+    margin-bottom: 0.15rem;
+}
+
+.setting-desc {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+}
+
+.account-danger-zone {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-4);
+    background: rgba(239, 68, 68, 0.06);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: var(--radius-md);
+    margin-top: var(--spacing-3);
+}
+
+.account-footer-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: var(--spacing-3);
+    margin-top: var(--spacing-4);
+    border-top: 1px solid var(--border-subtle);
+    padding-top: var(--spacing-4);
+}
+
+.save-notice {
+    font-size: 0.8125rem;
+    color: #10b981;
+    font-weight: 600;
+}
+
+.account-empty-state {
+    text-align: center;
+    padding: var(--spacing-8) var(--spacing-4);
+    color: var(--text-secondary);
+}
+
+.empty-sub {
+    font-size: 0.8125rem;
+    color: var(--text-tertiary);
+    margin-top: 0.35rem;
+}
+
+@media (max-width: 640px) {
+    .account-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .library-paper-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .library-paper-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}

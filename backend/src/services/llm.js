@@ -77,11 +77,10 @@ function isQuotaError(message = '') {
  * @returns {Object} A fully merged Nexus paper object, or null on failure
  */
 async function generateInsights(paperData) {
-    // 1. Validate that the paper actually has text for the AI to read
-    if (!paperData.abstract) {
-        console.log(`Skipping paper ${paperData.rawId}: No abstract available for processing.`);
-        return null;
-    }
+    const rawAbstract = (paperData.abstract || '').trim();
+    const effectiveAbstract = rawAbstract && !rawAbstract.includes('Abstract not directly indexed')
+        ? rawAbstract
+        : `Landmark research paper titled "${paperData.title}" published in ${paperData.journal || 'peer-reviewed literature'} by ${(paperData.authors || []).join(', ')} (${paperData.publishDate || ''}). DOI: ${paperData.doiUrl || ''}.`;
 
     // 2. Local Fallback/Mock Mode (if user doesn't have an API key configured)
     if (!ai) {
@@ -93,8 +92,8 @@ async function generateInsights(paperData) {
             journal: paperData.journal,
             publishDate: paperData.publishDate,
             doi: paperData.doiUrl,
-            abstract: paperData.abstract,
-            discipline: normalizeDiscipline('', paperData.title, paperData.abstract),
+            abstract: effectiveAbstract,
+            discipline: normalizeDiscipline('', paperData.title, effectiveAbstract),
             summary: "Mock summary due to missing API key.",
             significance: "Mock significance.",
             limitations: "Mock limitations.",
@@ -111,14 +110,16 @@ async function generateInsights(paperData) {
     const prompt = `
 You are an expert scientific communicator for the 'Nexus' platform. Your task is to transform the following peer-reviewed research metadata and abstract into accessible, nuanced insights for intellectually curious users. 
 
-Prioritize credibility, transparency, and critical thinking. DO NOT sensationalize the findings.
+Prioritize credibility, transparency, and critical thinking. DO NOT sensationalize the findings. If the abstract is brief or synthesized from publication metadata, utilize your deep scientific corpus knowledge of this landmark study to describe the core methodology, findings, real-world impact, and significance accurately.
 
 Raw Research Data:
 Title: ${paperData.title}
-Journal: ${paperData.journal}
-Abstract: ${paperData.abstract}
+Authors: ${(paperData.authors || []).join(', ')}
+Journal: ${paperData.journal || 'Academic Publication'}
+Publication Date: ${paperData.publishDate || 'Published work'}
+Abstract / Context: ${effectiveAbstract}
 
-Based on the abstract, extract the methodology and findings, then generate a JSON response strictly adhering to this schema:
+Based on this research work, extract the methodology and findings, then generate a JSON response strictly adhering to this schema:
 ${insightSchema}
 
 Ensure all JSON keys and structures match exactly. Output ONLY valid JSON, without markdown formatting blocks.
@@ -276,8 +277,102 @@ function generateFallbackInsights(paperData) {
     };
 }
 
+/**
+ * chatWithPaper
+ * Answers user questions grounded strictly in the provided research paper context.
+ * 
+ * @param {Object} params
+ * @param {Object} params.paper - Full paper object (title, abstract, summary, significance, limitations, etc.)
+ * @param {string} params.question - User's question
+ * @param {Array} [params.history] - Array of { role: 'user' | 'assistant', content: string }
+ * @returns {Promise<Object>} { answer: string }
+ */
+async function chatWithPaper({ paper, question, history = [] }) {
+    if (!paper || !question) {
+        throw new Error('Paper and question are required');
+    }
+
+    if (!ai) {
+        return { answer: generateOfflineChatResponse(paper, question) };
+    }
+
+    const systemInstruction = `
+You are an expert, articulate academic science communicator on the 'Nexus' platform.
+Your objective is to answer questions strictly grounded in the following research paper.
+
+RESEARCH PAPER CONTEXT:
+- Title: ${paper.title}
+- Authors: ${(paper.authors || []).join(', ')}
+- Journal: ${paper.journal || 'Academic Journal'} (${paper.publishDate || ''})
+- Discipline: ${paper.discipline || 'Science'}
+- Evidence Level: ${paper.metrics?.evidenceLevel || 'Unknown'} | Study Type: ${paper.metrics?.studyType || 'Journal Article'} | Citations: ${paper.metrics?.citations || 0}
+- Key Topics/Tags: ${(paper.tags || []).join(', ')}
+- Plain Summary: ${paper.summary || 'N/A'}
+- Real-World Significance: ${paper.significance || 'N/A'}
+- Limitations: ${paper.limitations || 'N/A'}
+- Full Abstract: ${paper.abstract || 'N/A'}
+
+GUIDELINES:
+1. Grounding: Answer accurately based on the context above. If a specific detail (e.g. exact chemical reagent dosage or non-abstract detail) is not present in the provided context, state clearly that it is beyond the abstract/summary scope and recommend checking the primary DOI.
+2. Tone & Clarity: Be direct, objective, insightful, and accessible without compromising scientific rigor.
+3. Formatting: Use clean markdown (bullet points, bold key terms) when explaining complex mechanisms or breaking down answers.
+`.trim();
+
+    const conversationPrompt = history.slice(-6).map(msg => 
+        `${msg.role === 'user' ? 'User' : 'Nexus AI'}: ${msg.content}`
+    ).join('\n\n');
+
+    const fullPrompt = `${systemInstruction}\n\n${conversationPrompt ? `CONVERSATION HISTORY:\n${conversationPrompt}\n\n` : ''}User Question: ${question}\n\nNexus AI Answer:`;
+
+    const candidateModels = [PRIMARY_MODEL, ...FALLBACK_MODELS];
+
+    for (const model of candidateModels) {
+        try {
+            const response = await ai.models.generateContent({
+                model,
+                contents: fullPrompt
+            });
+
+            if (response.text) {
+                return {
+                    answer: response.text.trim()
+                };
+            }
+        } catch (error) {
+            console.warn(`Chat model ${model} failed:`, error.message);
+        }
+    }
+
+    return { answer: generateOfflineChatResponse(paper, question) };
+}
+
+function generateOfflineChatResponse(paper, question) {
+    const q = (question || '').toLowerCase();
+
+    if (q.includes('limit') || q.includes('weakness') || q.includes('flaw') || q.includes('method')) {
+        return `**Methodology & Limitations for "${paper.title}":**\n\n${paper.limitations || 'The authors noted sampling and contextual constraints standard to this study design.'}\n\n*Evidence rating:* **${paper.metrics?.evidenceLevel || 'Moderate'}** (${paper.metrics?.studyType || 'Empirical Study'}).`;
+    }
+
+    if (q.includes('impact') || q.includes('matter') || q.includes('significan') || q.includes('real world') || q.includes('apply') || q.includes('practical')) {
+        return `**Real-World Significance:**\n\n${paper.significance || 'This research contributes key empirical data to current scientific understanding.'}\n\n*Journal & Scope:* Published in **${paper.journal}**, addressing key questions in **${paper.discipline}**.`;
+    }
+
+    if (q.includes('summary') || q.includes('explain') || q.includes('eli5') || q.includes('5 year') || q.includes('10 year') || q.includes('simple')) {
+        return `**Plain-Language Summary:**\n\n${paper.summary}\n\n*Key takeaways:* This ${paper.metrics?.studyType || 'study'} examines **${(paper.tags || []).slice(0, 3).join(', ')}** to understand underlying mechanisms in ${paper.discipline}.`;
+    }
+
+    if (q.includes('author') || q.includes('who wrote') || q.includes('journal') || q.includes('when') || q.includes('date')) {
+        return `**Publication Details:**\n\n- **Authors:** ${(paper.authors || []).join(', ')}\n- **Journal:** ${paper.journal}\n- **Published Date:** ${paper.publishDate}\n- **Citations:** ${paper.metrics?.citations || 0}`;
+    }
+
+    return `**Insights on "${paper.title}":**\n\n${paper.summary}\n\n**Significance:** ${paper.significance}\n\n*(Note: Running in offline research mode. For extended reasoning, connect a Gemini API key.)*`;
+}
+
 module.exports = {
     generateInsights,
-    generateFallbackInsights
+    generateFallbackInsights,
+    chatWithPaper,
+    generateOfflineChatResponse
 };
+
 
