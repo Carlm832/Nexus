@@ -91,22 +91,17 @@ export default function ResearchCard({
         >
             <div className="card-top-row">
                 <div className="card-meta-left">
-                    <span className={`discipline-chip ${discInfo.class}`}>
+                    <span className={`discipline-chip ${discInfo.class}`} title={study.discipline || 'Scholarly Paper'}>
                         {study.discipline || 'Scholarly Paper'}
                     </span>
-                    {formattedDate && (
-                        <span className="card-date">
-                            {formattedDate}
-                        </span>
-                    )}
-                </div>
-
-                <div className="card-actions">
                     {isOA && (
                         <span className="oa-badge" title="Open Access Research Paper (Free PDF)">
                             Open Access
                         </span>
                     )}
+                </div>
+
+                <div className="card-actions">
                     {study.audioUrl && onPlayAudio && (
                         <button
                             type="button"
@@ -139,7 +134,7 @@ export default function ResearchCard({
                                 <path d="M6 9a3 3 0 0 1 3-3h1v4H8a1 1 0 0 0-1 1v1h3v4H6V9zm8 0a3 3 0 0 1 3-3h1v4h-2a1 1 0 0 0-1 1v1h3v4h-4V9z"></path>
                             </svg>
                         )}
-                        <span>{copiedCite ? 'Copied APA' : 'Cite'}</span>
+                        <span>{copiedCite ? 'Copied' : 'Cite'}</span>
                     </button>
                     {onToggleBookmark && (
                         <button
@@ -162,9 +157,10 @@ export default function ResearchCard({
             </div>
 
             <header className="card-header">
-                <h3 className="heading-serif card-title">{study.title}</h3>
+                <h3 className="heading-serif card-title" title={study.title}>{study.title}</h3>
                 <p className="card-journal">
                     {study.journal || 'Academic Source'}
+                    {formattedDate ? ` • ${formattedDate}` : ''}
                     {citations > 0 ? ` • ${citations.toLocaleString()} citations` : ''}
                 </p>
             </header>
