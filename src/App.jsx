@@ -444,6 +444,61 @@ function App() {
   }, [papers, globalResults, readingHistory, addToReadingHistory]);
 
   /* -----------------------------------------------------------------------
+   * Filtered + Sorted Curated feed (must be declared before the keyboard
+   * shortcut useEffect that references activeStudies in its dep array)
+   * --------------------------------------------------------------------- */
+  const processedCuratedStudies = useMemo(() => {
+    let list = [...papers];
+
+    if (!includeEarlyResearch) {
+      list = list.filter(s => (s.reviewStatus || 'peerReviewed') !== 'preReview');
+    }
+
+    if (selectedDisciplines.length > 0) {
+      list = list.filter(s => selectedDisciplines.includes(s.discipline));
+    }
+
+    if (viewBookmarksOnly) {
+      list = list.filter(s => bookmarks.includes(s.id));
+    }
+
+    if (openAccessOnly) {
+      list = list.filter(s => s.isOpenAccess || s.oaUrl);
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(s => {
+        const title = (s.title || '').toLowerCase();
+        const summary = (s.summary || '').toLowerCase();
+        const journal = (s.journal || '').toLowerCase();
+        const authors = (s.authors || []).join(' ').toLowerCase();
+        const tags = (s.tags || []).join(' ').toLowerCase();
+        return title.includes(q) || summary.includes(q) || journal.includes(q) || authors.includes(q) || tags.includes(q);
+      });
+    }
+
+    if (selectedSort === 'cited_by_count:desc' || selectedSort === 'citations') {
+      list.sort((a, b) => (b.metrics?.citations || b.citations || 0) - (a.metrics?.citations || a.citations || 0));
+    } else {
+      list.sort((a, b) => new Date(b.publishDate || 0) - new Date(a.publishDate || 0));
+    }
+
+    return list;
+  }, [papers, includeEarlyResearch, selectedDisciplines, viewBookmarksOnly, openAccessOnly, searchQuery, selectedSort, bookmarks]);
+
+  // Collect full paper objects for saved bookmarks
+  const savedPapersList = useMemo(() => {
+    const paperMap = new Map();
+    papers.forEach(p => paperMap.set(p.id, p));
+    globalResults.forEach(p => paperMap.set(p.id, p));
+    readingHistory.forEach(p => paperMap.set(p.id, p));
+    return bookmarks.map(id => paperMap.get(id) || { id, title: `Paper DOI: ${id}` }).filter(Boolean);
+  }, [papers, globalResults, readingHistory, bookmarks]);
+
+  const activeStudies = searchMode === 'global' ? globalResults : processedCuratedStudies;
+
+  /* -----------------------------------------------------------------------
    * Power-user keyboard shortcuts
    * /  → focus search
    * ?  → toggle shortcuts modal
@@ -542,60 +597,6 @@ function App() {
     setCurrentUser(null);
     setViewBookmarksOnly(false);
   }, []);
-
-  /* -----------------------------------------------------------------------
-   * Filtered + Sorted Curated feed
-   * --------------------------------------------------------------------- */
-  const processedCuratedStudies = useMemo(() => {
-    let list = [...papers];
-
-    if (!includeEarlyResearch) {
-      list = list.filter(s => (s.reviewStatus || 'peerReviewed') !== 'preReview');
-    }
-
-    if (selectedDisciplines.length > 0) {
-      list = list.filter(s => selectedDisciplines.includes(s.discipline));
-    }
-
-    if (viewBookmarksOnly) {
-      list = list.filter(s => bookmarks.includes(s.id));
-    }
-
-    if (openAccessOnly) {
-      list = list.filter(s => s.isOpenAccess || s.oaUrl);
-    }
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      list = list.filter(s => {
-        const title = (s.title || '').toLowerCase();
-        const summary = (s.summary || '').toLowerCase();
-        const journal = (s.journal || '').toLowerCase();
-        const authors = (s.authors || []).join(' ').toLowerCase();
-        const tags = (s.tags || []).join(' ').toLowerCase();
-        return title.includes(q) || summary.includes(q) || journal.includes(q) || authors.includes(q) || tags.includes(q);
-      });
-    }
-
-    if (selectedSort === 'cited_by_count:desc' || selectedSort === 'citations') {
-      list.sort((a, b) => (b.metrics?.citations || b.citations || 0) - (a.metrics?.citations || a.citations || 0));
-    } else {
-      list.sort((a, b) => new Date(b.publishDate || 0) - new Date(a.publishDate || 0));
-    }
-
-    return list;
-  }, [papers, includeEarlyResearch, selectedDisciplines, viewBookmarksOnly, openAccessOnly, searchQuery, selectedSort, bookmarks]);
-
-  // Collect full paper objects for saved bookmarks
-  const savedPapersList = useMemo(() => {
-    const paperMap = new Map();
-    papers.forEach(p => paperMap.set(p.id, p));
-    globalResults.forEach(p => paperMap.set(p.id, p));
-    readingHistory.forEach(p => paperMap.set(p.id, p));
-    return bookmarks.map(id => paperMap.get(id) || { id, title: `Paper DOI: ${id}` }).filter(Boolean);
-  }, [papers, globalResults, readingHistory, bookmarks]);
-
-  const activeStudies = searchMode === 'global' ? globalResults : processedCuratedStudies;
 
   return (
     <div className="app-container">
