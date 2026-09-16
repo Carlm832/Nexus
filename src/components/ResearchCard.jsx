@@ -117,21 +117,34 @@ export default function ResearchCard({
                             }}
                             title="Listen to audio narration"
                         >
-                            {isAudioPlaying ? 'Playing' : 'Listen'}
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                            </svg>
+                            <span>{isAudioPlaying ? 'Playing' : 'Listen'}</span>
                         </button>
                     )}
                     <button
                         type="button"
-                        className={`card-action-btn ${copiedCite ? 'copied' : ''}`}
+                        className={`card-action-btn cite-btn ${copiedCite ? 'copied' : ''}`}
                         onClick={handleQuickCite}
                         title="Copy APA citation to clipboard"
                     >
-                        {copiedCite ? 'Copied APA' : 'Cite'}
+                        {copiedCite ? (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        ) : (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <path d="M6 9a3 3 0 0 1 3-3h1v4H8a1 1 0 0 0-1 1v1h3v4H6V9zm8 0a3 3 0 0 1 3-3h1v4h-2a1 1 0 0 0-1 1v1h3v4h-4V9z"></path>
+                            </svg>
+                        )}
+                        <span>{copiedCite ? 'Copied APA' : 'Cite'}</span>
                     </button>
                     {onToggleBookmark && (
                         <button
                             type="button"
-                            className={`card-bookmark-btn ${isBookmarked ? 'active' : ''}`}
+                            className={`card-action-btn card-bookmark-btn ${isBookmarked ? 'active' : ''}`}
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onToggleBookmark(study.id);
@@ -139,7 +152,10 @@ export default function ResearchCard({
                             aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark paper'}
                             title={isBookmarked ? 'Remove bookmark' : 'Bookmark paper'}
                         >
-                            {isBookmarked ? 'Saved' : 'Save'}
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            <span>{isBookmarked ? 'Saved' : 'Save'}</span>
                         </button>
                     )}
                 </div>
