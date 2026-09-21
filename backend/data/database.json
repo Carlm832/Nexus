@@ -1,5 +1,62 @@
 [
   {
+    "id": "W4288400169",
+    "title": "Yaşlı Kadınlarda Üreme Sağlığı",
+    "authors": [
+      "Kokanalı, Demet",
+      "Engin Üstün, Yaprak"
+    ],
+    "journal": "DergiPark (Istanbul University)",
+    "publishDate": "2024-01-01",
+    "doi": null,
+    "abstract": "Üreme sağlığı, üreme sistemi ve onun fonksiyonlarına ilişkin hastalık ya da sakatlık olmaması ve zihinsel ve sosyal açıdan bütünüyle iyi olma durumudur. Üreme sağlığı aynı zamanda insanların tatmin edici ve güvenli bir cinsel yaşamlarının olması, üreme yeteneğine sahip olmaları, üreme yeteneklerini kullanmada karar verme özgürlüğüne sahip olmaları demektir. Doğurganlığı içerisinde barındırdığı için doğurganlığın sona erdiği menopoz ve menopoz sonrası yaşlı kadınlar için bu konu genellikle göz ardı edilmektedir. Halbuki, üreme sağlığı kadın-erkek, genç-yaşlı bütün bireylerin temel hakkı olarak kabul edilmelidir. Biz bu derlememizde 50 yaş üstü ve yaşlı kadınların üreme sağlığı konularındaki sorunlarına eğilmeyi amaçladık.",
+    "discipline": "Biology",
+    "summary": "Reproductive health encompasses physical, mental, and social well-being related to the reproductive system, yet it is frequently overlooked in postmenopausal and elderly women once fertility ceases. This review emphasizes that reproductive health remains a fundamental right for individuals of all ages, highlighting the ongoing sexual, physiological, and social needs of women over age 50. The authors synthesize literature to address specific health challenges faced by aging women, advocating for holistic care that extends well beyond childbearing years.",
+    "significance": "This work underscores the need to reframe healthcare policies to ensure postmenopausal women receive adequate gynecological, sexual, and preventive care throughout their lifespan. By destigmatizing geriatric sexual health, it promotes more inclusive clinical guidelines and better quality of life for older demographics.",
+    "limitations": "As a narrative review, the paper provides a conceptual synthesis of existing literature rather than presenting new empirical clinical data or statistical meta-analyses. Consequently, the findings reflect thematic trends rather than standardized, quantitative effect sizes.",
+    "metrics": {
+      "evidenceLevel": "Preliminary",
+      "citations": 170300,
+      "studyType": "Literature Review"
+    },
+    "tags": [
+      "Reproductive Health",
+      "Menopause",
+      "Geriatrics",
+      "Women's Health",
+      "Aging"
+    ],
+    "oaUrl": "https://dergipark.org.tr/tr/pub/jgon/issue/51866/675113"
+  },
+  {
+    "id": "10.32614/r.manuals",
+    "title": "R: A Language and Environment for Statistical Computing",
+    "authors": [
+      "R Core Team"
+    ],
+    "journal": "Academic Journal",
+    "publishDate": "2000-02-29",
+    "doi": "https://doi.org/10.32614/r.manuals",
+    "abstract": "This introduction to R is derived from an original set of notes describing the S and S-Plus environments written in 1990-2 by Bill Venables and David M",
+    "discipline": "Artificial Intelligence",
+    "summary": "R provides a comprehensive computational environment and programming language specifically designed for statistical computing, data analysis, and graphical display. Developed as an open-source software project based on the S language, it integrates tools for data manipulation, matrix calculations, and advanced visual formatting. The platform features a modular, highly extensible architecture that enables users to implement and distribute custom statistical algorithms.",
+    "significance": "R transformed quantitative research by establishing a powerful, free, and open platform for reproducible data analysis across scientific disciplines. It democratized access to advanced statistical methodologies and built the foundation for modern data science infrastructure.",
+    "limitations": "Base R can face computational bottlenecks and memory limitations when processing extremely large-scale datasets compared to lower-level compiled languages. Additionally, the decentralized nature of its third-party package repository leads to variable levels of code maintenance, testing, and documentation.",
+    "metrics": {
+      "evidenceLevel": "High",
+      "citations": 353312,
+      "studyType": "Computational"
+    },
+    "tags": [
+      "Statistical Computing",
+      "Data Science",
+      "Open Source",
+      "Programming Languages",
+      "Data Visualization"
+    ],
+    "oaUrl": "https://cran.r-project.org/doc/manuals/r-release/R-intro.pdf"
+  },
+  {
     "id": "10.1109/cvpr.2016.90",
     "title": "Deep Residual Learning for Image Recognition",
     "authors": [

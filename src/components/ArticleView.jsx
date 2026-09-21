@@ -1,129 +1,55 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './ArticleView.css';
 import { formatAPA, formatBibTeX, formatMLA } from '../utils/citationHelper';
+import { globalAudio } from '../utils/audioController';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? '';
 
 /* =========================================================================
  * AudioPlayer Component
  * 
- * High-performance audio player with:
+ * High-performance audio player synchronized with the Global Audio Manager:
  * - Seekable timeline scrubber
  * - Playback rate selector (0.75x - 2x)
  * - Safe MP3 download handling
- * - Clean solid surface styling
+ * - Continuous playback across page views & background navigation
  * ========================================================================= */
 const AudioPlayer = ({ article, isAuthenticated, onAuthRequest }) => {
-    const audioRef = useRef(null);
-
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
-    const [playbackRate, setPlaybackRate] = useState(1);
-    const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
-    const [audioError, setAudioError] = useState(null);
-    const [localAudioUrl, setLocalAudioUrl] = useState(article.audioUrl || null);
+    const [audioState, setAudioState] = useState(globalAudio.getState());
 
     useEffect(() => {
-        setLocalAudioUrl(article.audioUrl || null);
-        setIsPlaying(false);
-        setCurrentTime(0);
-        setIsGeneratingAudio(false);
-        setAudioError(null);
-    }, [article.id, article.audioUrl]);
+        const unsubscribe = globalAudio.subscribe(setAudioState);
+        return unsubscribe;
+    }, []);
 
-    // Resolve audio URL safely
-    const resolvedAudioSrc = localAudioUrl
-        ? (localAudioUrl.startsWith('http') ? localAudioUrl : `${API_BASE_URL}${localAudioUrl}`)
-        : null;
+    const isCurrentPaper = audioState.activePaper && (audioState.activePaper.id === article.id || (article.doi && audioState.activePaper.doi === article.doi));
+    const isPlaying = isCurrentPaper && audioState.isPlaying;
+    const isGenerating = isCurrentPaper && audioState.isGenerating;
+    const currentTime = isCurrentPaper ? audioState.currentTime : 0;
+    const duration = isCurrentPaper ? audioState.duration : 0;
+    const playbackRate = isCurrentPaper ? audioState.playbackRate : 1;
+    const mode = isCurrentPaper ? audioState.mode : 'file';
 
     const formatTime = (timeInSeconds) => {
-        if (isNaN(timeInSeconds) || !isFinite(timeInSeconds)) return "0:00";
+        if (isNaN(timeInSeconds) || !isFinite(timeInSeconds) || timeInSeconds < 0) return "0:00";
         const m = Math.floor(timeInSeconds / 60);
         const s = Math.floor(timeInSeconds % 60);
         return `${m}:${s < 10 ? '0' : ''}${s}`;
     };
 
-    const generateAndPlayElevenLabs = async () => {
-        setIsGeneratingAudio(true);
-        setAudioError(null);
-
-        try {
-            const paperId = article.id || article.doi;
-            const res = await fetch(`${API_BASE_URL}/api/papers/${encodeURIComponent(paperId)}/audio`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ paper: article })
-            });
-
-            if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.error || `Audio generation failed (${res.status})`);
-            }
-
-            const data = await res.json();
-            if (data.audioUrl) {
-                setLocalAudioUrl(data.audioUrl);
-                article.audioUrl = data.audioUrl;
-                // Wait for audio element to load new source
-                setTimeout(() => {
-                    if (audioRef.current) {
-                        audioRef.current.play().then(() => setIsPlaying(true)).catch(console.warn);
-                    }
-                }, 300);
-            }
-        } catch (err) {
-            console.error('ElevenLabs generation error:', err);
-            setAudioError(err.message);
-        } finally {
-            setIsGeneratingAudio(false);
-        }
-    };
-
     const togglePlay = () => {
-        if (resolvedAudioSrc && audioRef.current) {
-            if (isPlaying) {
-                audioRef.current.pause();
-                setIsPlaying(false);
-            } else {
-                audioRef.current.play().then(() => setIsPlaying(true)).catch(err => {
-                    console.warn("Audio playback error:", err);
-                });
-            }
-        } else {
-            // Paper doesn't have an audio file yet -> Generate on-demand with ElevenLabs!
-            generateAndPlayElevenLabs();
-        }
+        globalAudio.playPaper(article);
     };
 
     const handleSeek = (e) => {
         const targetTime = Number(e.target.value);
-        if (audioRef.current && isFinite(targetTime)) {
-            audioRef.current.currentTime = targetTime;
-            setCurrentTime(targetTime);
+        if (isFinite(targetTime)) {
+            globalAudio.seek(targetTime);
         }
     };
 
     const changeSpeed = (rate) => {
-        setPlaybackRate(rate);
-        if (audioRef.current) {
-            audioRef.current.playbackRate = rate;
-        }
-    };
-
-    const handleTimeUpdate = () => {
-        if (audioRef.current) {
-            setCurrentTime(audioRef.current.currentTime);
-            if (audioRef.current.duration && isFinite(audioRef.current.duration)) {
-                setDuration(audioRef.current.duration);
-            }
-        }
-    };
-
-    const handleLoadedMetadata = () => {
-        if (audioRef.current && isFinite(audioRef.current.duration)) {
-            setDuration(audioRef.current.duration);
-        }
+        globalAudio.setPlaybackRate(rate);
     };
 
     const handleDownload = () => {
@@ -132,11 +58,13 @@ const AudioPlayer = ({ article, isAuthenticated, onAuthRequest }) => {
             return;
         }
 
-        if (resolvedAudioSrc) {
+        const rawUrl = article.audioUrl || (isCurrentPaper && audioState.activePaper?.audioUrl);
+        if (rawUrl) {
+            const resolvedUrl = rawUrl.startsWith('http') ? rawUrl : `${API_BASE_URL}${rawUrl}`;
             const rawDoi = article.doi || article.id || 'nexus_synthesis';
             const cleanName = rawDoi.replace(/^https?:\/\/doi\.org\//i, '').replace(/[^a-zA-Z0-9_-]/g, '_');
             const a = document.createElement('a');
-            a.href = resolvedAudioSrc;
+            a.href = resolvedUrl;
             a.download = `${cleanName}.mp3`;
             document.body.appendChild(a);
             a.click();
@@ -144,47 +72,35 @@ const AudioPlayer = ({ article, isAuthenticated, onAuthRequest }) => {
         }
     };
 
-    const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+    const progressPercent = duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0;
+    const hasDownloadableAudio = Boolean(article.audioUrl || (isCurrentPaper && audioState.activePaper?.audioUrl));
 
     return (
         <div className="audio-player editorial-card animate-fade-in">
-            {resolvedAudioSrc && (
-                <audio
-                    ref={audioRef}
-                    src={resolvedAudioSrc}
-                    onEnded={() => {
-                        setIsPlaying(false);
-                        setCurrentTime(0);
-                    }}
-                    onTimeUpdate={handleTimeUpdate}
-                    onLoadedMetadata={handleLoadedMetadata}
-                />
-            )}
-
             <div className="player-main-row">
                 <button
                     type="button"
-                    className={`play-btn ${isPlaying ? 'playing' : ''} ${isGeneratingAudio ? 'generating' : ''}`}
+                    className={`play-btn ${isPlaying ? 'playing' : ''} ${isGenerating ? 'generating' : ''}`}
                     onClick={togglePlay}
-                    disabled={isGeneratingAudio}
-                    aria-label={isPlaying ? 'Pause narration' : 'Play ElevenLabs narrated synthesis'}
-                    title={isGeneratingAudio ? 'Generating ElevenLabs studio audio...' : isPlaying ? 'Pause' : 'Listen with ElevenLabs Studio Voice'}
+                    disabled={isGenerating}
+                    aria-label={isPlaying ? 'Pause narration' : 'Play audio narration'}
+                    title={isGenerating ? 'Synthesizing voice narration...' : isPlaying ? 'Pause' : 'Listen with Audio Narration'}
                 >
-                    {isGeneratingAudio ? '⚡' : isPlaying ? '⏸' : '▶'}
+                    {isGenerating ? '⚡' : isPlaying ? '⏸' : '▶'}
                 </button>
 
                 <div className="player-timeline-container">
                     <div className="player-labels">
                         <span className="audio-mode-label">
-                            {isGeneratingAudio ? (
-                                <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>Generating ElevenLabs Studio Voice...</span>
-                            ) : resolvedAudioSrc ? (
-                                <span>ElevenLabs Studio Voice</span>
+                            {isGenerating ? (
+                                <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>Synthesizing Studio Audio...</span>
+                            ) : isCurrentPaper ? (
+                                <span>{mode === 'speech' ? 'Browser Voice Narration' : 'ElevenLabs Studio Narration'}</span>
                             ) : (
-                                <span>ElevenLabs Narration (Click Play to Listen)</span>
+                                <span>Audio Narration (Click Play to Listen)</span>
                             )}
                         </span>
-                        {resolvedAudioSrc && (
+                        {duration > 0 && (
                             <span className="time-display">
                                 {formatTime(currentTime)} / {formatTime(duration)}
                             </span>
@@ -192,7 +108,7 @@ const AudioPlayer = ({ article, isAuthenticated, onAuthRequest }) => {
                     </div>
 
                     <div className="scrubber-wrapper">
-                        {resolvedAudioSrc ? (
+                        {duration > 0 ? (
                             <input
                                 type="range"
                                 min="0"
@@ -205,7 +121,7 @@ const AudioPlayer = ({ article, isAuthenticated, onAuthRequest }) => {
                             />
                         ) : (
                             <div className="fallback-progress-bar">
-                                <div className={`fallback-progress-fill ${isGeneratingAudio ? 'generating-pulse' : ''}`} style={{ width: isGeneratingAudio ? '100%' : '0%' }}></div>
+                                <div className={`fallback-progress-fill ${isGenerating ? 'generating-pulse' : ''}`} style={{ width: isGenerating ? '100%' : '0%' }}></div>
                             </div>
                         )}
                     </div>
@@ -225,7 +141,7 @@ const AudioPlayer = ({ article, isAuthenticated, onAuthRequest }) => {
                         ))}
                     </div>
 
-                    {resolvedAudioSrc && (
+                    {hasDownloadableAudio && (
                         <button
                             type="button"
                             className="download-audio-btn"
@@ -594,6 +510,20 @@ const PaperChat = ({ article }) => {
  * ArticleView Main Component
  * ========================================================================= */
 
+const SUPPORTED_LANGUAGES = [
+    { code: 'en', label: 'English', flag: '🇬🇧' },
+    { code: 'es', label: 'Spanish (Español)', flag: '🇪🇸' },
+    { code: 'tr', label: 'Turkish (Türkçe)', flag: '🇹🇷' },
+    { code: 'de', label: 'German (Deutsch)', flag: '🇩🇪' },
+    { code: 'fr', label: 'French (Français)', flag: '🇫🇷' },
+    { code: 'zh', label: 'Chinese (中文)', flag: '🇨🇳' },
+    { code: 'ja', label: 'Japanese (日本語)', flag: '🇯🇵' },
+    { code: 'pt', label: 'Portuguese (Português)', flag: '🇵🇹' },
+    { code: 'it', label: 'Italian (Italiano)', flag: '🇮🇹' },
+    { code: 'ar', label: 'Arabic (العربية)', flag: '🇸🇦' },
+    { code: 'ru', label: 'Russian (Русский)', flag: '🇷🇺' }
+];
+
 export default function ArticleView({
     article,
     onBack,
@@ -608,7 +538,57 @@ export default function ArticleView({
     const [isSplitView, setIsSplitView] = useState(false);
     const [copiedFormat, setCopiedFormat] = useState(null);
 
+    // Multilingual Translation State
+    const [selectedLanguage, setSelectedLanguage] = useState('en');
+    const [isTranslating, setIsTranslating] = useState(false);
+    const [translationsCache, setTranslationsCache] = useState({});
+    const [viewOriginal, setViewOriginal] = useState(false);
+
     const hasPdf = Boolean(article?.oaUrl || article?.pdfUrl);
+
+    const handleLanguageChange = async (targetLang) => {
+        setSelectedLanguage(targetLang);
+        setViewOriginal(false);
+
+        if (targetLang === 'en') return;
+
+        if (translationsCache[targetLang]) return;
+
+        try {
+            setIsTranslating(true);
+            const res = await fetch(`${API_BASE_URL}/api/papers/translate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    study: {
+                        id: article.id,
+                        title: article.title,
+                        summary: article.summary,
+                        significance: article.significance,
+                        limitations: article.limitations,
+                        abstract: article.abstract
+                    },
+                    targetLanguage: targetLang
+                })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setTranslationsCache(prev => ({ ...prev, [targetLang]: data }));
+            }
+        } catch (err) {
+            console.error('Translation failed:', err);
+        } finally {
+            setIsTranslating(false);
+        }
+    };
+
+    const currentTranslation = translationsCache[selectedLanguage];
+    const isTranslatedActive = selectedLanguage !== 'en' && !viewOriginal && Boolean(currentTranslation);
+
+    const displayTitle = isTranslatedActive && currentTranslation.translatedTitle ? currentTranslation.translatedTitle : article?.title;
+    const displaySummary = isTranslatedActive && currentTranslation.translatedSummary ? currentTranslation.translatedSummary : article?.summary;
+    const displaySignificance = isTranslatedActive && currentTranslation.translatedSignificance ? currentTranslation.translatedSignificance : article?.significance;
+    const displayLimitations = isTranslatedActive && currentTranslation.translatedLimitations ? currentTranslation.translatedLimitations : article?.limitations;
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -653,6 +633,28 @@ export default function ArticleView({
                 </button>
 
                 <div className="article-action-buttons">
+                    {/* Multilingual Translation Dropdown */}
+                    <div className="lang-select-wrapper">
+                        <span className="lang-globe-icon" aria-hidden="true">🌐</span>
+                        <select
+                            className="lang-select-input"
+                            value={selectedLanguage}
+                            onChange={(e) => handleLanguageChange(e.target.value)}
+                            disabled={isTranslating}
+                            title="Translate study synthesis into other languages"
+                            aria-label="Translate study synthesis"
+                        >
+                            {SUPPORTED_LANGUAGES.map(lang => (
+                                <option key={lang.code} value={lang.code}>
+                                    {lang.flag} {lang.label}
+                                </option>
+                            ))}
+                        </select>
+                        {isTranslating && (
+                            <span className="lang-translating-pulse" title="Translating with Gemini AI...">⚡</span>
+                        )}
+                    </div>
+
                     <button
                         type="button"
                         className={`action-pill-btn ${isBookmarked ? 'bookmarked' : ''}`}
@@ -705,6 +707,30 @@ export default function ArticleView({
                 </div>
             </div>
 
+            {/* Translation Active Notification Banner */}
+            {selectedLanguage !== 'en' && (
+                <div className="translation-banner editorial-card animate-fade-in">
+                    <div className="translation-banner-content">
+                        {isTranslating ? (
+                            <span>⚡ Translating paper synthesis into <strong>{SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.label}</strong> with Gemini AI...</span>
+                        ) : (
+                            <>
+                                <span>
+                                    ✨ <strong>{viewOriginal ? 'Showing Original English' : `AI Translated into ${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.label}`}</strong> (Powered by Gemini)
+                                </span>
+                                <button
+                                    type="button"
+                                    className="toggle-translation-btn"
+                                    onClick={() => setViewOriginal(v => !v)}
+                                >
+                                    {viewOriginal ? 'Switch to Translated View' : 'Switch to Original English'}
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+
             <div className={isSplitView && hasPdf ? 'split-view-container' : 'single-view-container'}>
                 {/* Left Column: Header, Audio, Synthesis Tabs */}
                 <div className="split-view-left">
@@ -723,7 +749,7 @@ export default function ArticleView({
                             <span className="journal-text">{article.journal}</span>
                         </div>
 
-                        <h1 className="heading-serif article-title">{article.title}</h1>
+                        <h1 className="heading-serif article-title">{displayTitle}</h1>
                         <p className="article-authors">{(article.authors || []).join(', ')}</p>
 
                         <div className="meta-pills">
@@ -834,7 +860,7 @@ export default function ArticleView({
                                 <div className="content-block">
                                     <div className="highlight-box">
                                         <h4 className="box-heading">Core Synthesis</h4>
-                                        <p className="lead-paragraph">{article.summary}</p>
+                                        <p className="lead-paragraph">{displaySummary}</p>
                                     </div>
 
                                     {article.tags && article.tags.length > 0 && (
@@ -854,7 +880,7 @@ export default function ArticleView({
                                 <div className="content-block">
                                     <div className="highlight-box impact-box">
                                         <h4 className="box-heading">Why It Matters</h4>
-                                        <p className="lead-paragraph">{article.significance}</p>
+                                        <p className="lead-paragraph">{displaySignificance}</p>
                                     </div>
                                 </div>
                             )}
@@ -871,7 +897,7 @@ export default function ArticleView({
                                         <div className="limitation-row">
                                             <strong>Evidence Confidence:</strong> {article.metrics?.evidenceLevel || 'Preliminary'}
                                         </div>
-                                        <p className="limitation-text">{article.limitations}</p>
+                                        <p className="limitation-text">{displayLimitations}</p>
                                         {article.funding && (
                                             <div className="funding-note">
                                                 <em>Funding & Disclosures: {article.funding}</em>

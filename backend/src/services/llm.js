@@ -61,11 +61,21 @@ function extractRetryDelayMs(message = '') {
 }
 
 function isRetryableError(message = '') {
-    return message.includes('"status":"UNAVAILABLE"') || message.includes('"status":"RESOURCE_EXHAUSTED"');
+    return (
+        message.includes('"status":"UNAVAILABLE"') ||
+        message.includes('"status":"RESOURCE_EXHAUSTED"') ||
+        message.includes('UNAVAILABLE') ||
+        message.includes('503') ||
+        message.includes('No capacity available')
+    );
 }
 
 function isQuotaError(message = '') {
-    return message.includes('"status":"RESOURCE_EXHAUSTED"');
+    return (
+        message.includes('"status":"RESOURCE_EXHAUSTED"') ||
+        message.includes('RESOURCE_EXHAUSTED') ||
+        message.includes('429')
+    );
 }
 
 /**
@@ -181,8 +191,9 @@ Ensure all JSON keys and structures match exactly. Output ONLY valid JSON, witho
                 continue;
             }
 
-            if (isQuotaError(message) && model !== candidateModels[candidateModels.length - 1]) {
-                console.warn(`Gemini model ${model} exhausted quota for ${paperData.rawId}; trying next model.`);
+            if ((isQuotaError(message) || isRetryableError(message)) && model !== candidateModels[candidateModels.length - 1]) {
+                console.warn(`Gemini model ${model} unavailable/exhausted for ${paperData.rawId}; trying next model in 3s...`);
+                await sleep(3000);
                 break;
             }
 
@@ -368,11 +379,120 @@ function generateOfflineChatResponse(paper, question) {
     return `**Insights on "${paper.title}":**\n\n${paper.summary}\n\n**Significance:** ${paper.significance}\n\n*(Note: Running in offline research mode. For extended reasoning, connect a Gemini API key.)*`;
 }
 
+/**
+ * translateStudy
+ * Translates a paper's synthesis, key takeaways, and methodology into the target language.
+ */
+async function translateStudy({ study, targetLanguage = 'es' }) {
+    if (!study || !targetLanguage) {
+        throw new Error('Study and targetLanguage are required');
+    }
+
+    const languageMap = {
+        'es': 'Spanish (Español)',
+        'tr': 'Turkish (Türkçe)',
+        'de': 'German (Deutsch)',
+        'fr': 'French (Français)',
+        'zh': 'Simplified Chinese (简体中文)',
+        'ja': 'Japanese (日本語)',
+        'pt': 'Portuguese (Português)',
+        'it': 'Italian (Italiano)',
+        'ar': 'Arabic (العربية)',
+        'ru': 'Russian (Русский)',
+        'en': 'English'
+    };
+
+    const targetLangName = languageMap[targetLanguage.toLowerCase()] || targetLanguage;
+
+    if (targetLanguage.toLowerCase() === 'en') {
+        return {
+            translatedTitle: study.title,
+            translatedSummary: study.summary,
+            translatedSignificance: study.significance,
+            translatedLimitations: study.limitations,
+            translatedAbstract: study.abstract,
+            targetLanguage: 'en'
+        };
+    }
+
+    if (!ai) {
+        return {
+            translatedTitle: `[${targetLangName}] ${study.title}`,
+            translatedSummary: `[${targetLangName}] ${study.summary || ''}`,
+            translatedSignificance: `[${targetLangName}] ${study.significance || ''}`,
+            translatedLimitations: `[${targetLangName}] ${study.limitations || ''}`,
+            translatedAbstract: study.abstract || '',
+            targetLanguage
+        };
+    }
+
+    const prompt = `
+You are a professional academic translator and scientific communicator.
+Your task is to accurately and elegantly translate the following research paper synthesis into ${targetLangName}.
+Maintain scientific precision, scholarly tone, and natural phrasing.
+
+Original English Research Data:
+Title: ${study.title}
+Summary: ${study.summary || study.abstract || ''}
+Significance: ${study.significance || ''}
+Limitations: ${study.limitations || ''}
+
+Respond with a JSON object strictly matching this schema:
+{
+  "translatedTitle": "Accurate scholarly translation of title in ${targetLangName}",
+  "translatedSummary": "Fluent, scientifically rigorous translation of the summary in ${targetLangName}",
+  "translatedSignificance": "Translation of the significance section in ${targetLangName}",
+  "translatedLimitations": "Translation of the limitations section in ${targetLangName}"
+}
+
+Output ONLY valid JSON.
+`.trim();
+
+    const candidateModels = [PRIMARY_MODEL, ...FALLBACK_MODELS];
+
+    for (const model of candidateModels) {
+        try {
+            const response = await ai.models.generateContent({
+                model,
+                contents: prompt,
+                config: {
+                    responseMimeType: 'application/json'
+                }
+            });
+
+            const structuredData = JSON.parse(response.text);
+            return {
+                translatedTitle: structuredData.translatedTitle || study.title,
+                translatedSummary: structuredData.translatedSummary || study.summary,
+                translatedSignificance: structuredData.translatedSignificance || study.significance,
+                translatedLimitations: structuredData.translatedLimitations || study.limitations,
+                targetLanguage
+            };
+        } catch (error) {
+            const msg = error.message || String(error);
+            console.warn(`Translation with model ${model} failed:`, msg);
+            if (isRetryableError(msg) && model !== candidateModels[candidateModels.length - 1]) {
+                await sleep(3000);
+            }
+        }
+    }
+
+    return {
+        translatedTitle: `[${targetLangName}] ${study.title}`,
+        translatedSummary: `[${targetLangName}] ${study.summary || ''}`,
+        translatedSignificance: `[${targetLangName}] ${study.significance || ''}`,
+        translatedLimitations: `[${targetLangName}] ${study.limitations || ''}`,
+        targetLanguage
+    };
+}
+
 module.exports = {
     generateInsights,
     generateFallbackInsights,
     chatWithPaper,
-    generateOfflineChatResponse
+    generateOfflineChatResponse,
+    translateStudy
 };
+
 
 

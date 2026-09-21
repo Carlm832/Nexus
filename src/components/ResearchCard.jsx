@@ -18,6 +18,18 @@ const DISCIPLINE_CONFIG = {
     'Physics': { class: 'badge-phys' }
 };
 
+const LANG_FLAGS = {
+    'es': { flag: '🇪🇸', label: 'Spanish' },
+    'de': { flag: '🇩🇪', label: 'German' },
+    'fr': { flag: '🇫🇷', label: 'French' },
+    'tr': { flag: '🇹🇷', label: 'Turkish' },
+    'zh': { flag: '🇨🇳', label: 'Chinese' },
+    'ja': { flag: '🇯🇵', label: 'Japanese' },
+    'pt': { flag: '🇵🇹', label: 'Portuguese' },
+    'it': { flag: '🇮🇹', label: 'Italian' },
+    'ru': { flag: '🇷🇺', label: 'Russian' }
+};
+
 const EvidenceBadge = ({ level }) => {
     if (!level) return null;
     let pillClass = 'pill-neutral';
@@ -94,65 +106,81 @@ export default function ResearchCard({
                     <span className={`discipline-chip ${discInfo.class}`} title={study.discipline || 'Scholarly Paper'}>
                         {study.discipline || 'Scholarly Paper'}
                     </span>
-                    {isOA && (
-                        <span className="oa-badge" title="Open Access Research Paper (Free PDF)">
-                            Open Access
+                    {study.language && study.language !== 'en' && LANG_FLAGS[study.language.toLowerCase()] && (
+                        <span className="lang-badge" title={`Original paper published in ${LANG_FLAGS[study.language.toLowerCase()].label}`}>
+                            {LANG_FLAGS[study.language.toLowerCase()].flag} {study.language.toUpperCase()}
                         </span>
                     )}
                 </div>
 
                 <div className="card-actions">
-                    {study.audioUrl && onPlayAudio && (
-                        <button
-                            type="button"
-                            className={`card-action-btn ${isAudioPlaying ? 'active-audio' : ''}`}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onPlayAudio(study);
-                            }}
-                            title="Listen to audio narration"
-                        >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                            </svg>
-                            <span>{isAudioPlaying ? 'Playing' : 'Listen'}</span>
-                        </button>
+                    {isOA && (
+                        <span className="oa-badge card-actions-oa" title="Open Access Research Paper (Free PDF)">
+                            Open Access
+                        </span>
                     )}
-                    <button
-                        type="button"
-                        className={`card-action-btn cite-btn ${copiedCite ? 'copied' : ''}`}
-                        onClick={handleQuickCite}
-                        title="Copy APA citation to clipboard"
-                    >
-                        {copiedCite ? (
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
-                        ) : (
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <path d="M6 9a3 3 0 0 1 3-3h1v4H8a1 1 0 0 0-1 1v1h3v4H6V9zm8 0a3 3 0 0 1 3-3h1v4h-2a1 1 0 0 0-1 1v1h3v4h-4V9z"></path>
-                            </svg>
+                    <div className="card-action-btns">
+                        {onPlayAudio && (
+                            <button
+                                type="button"
+                                className={`card-action-btn ${isAudioPlaying ? 'active-audio' : ''}`}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onPlayAudio(study);
+                                }}
+                                title={isAudioPlaying ? "Pause audio narration" : "Listen to audio narration"}
+                            >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill={isAudioPlaying ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    {isAudioPlaying ? (
+                                        <>
+                                            <rect x="6" y="4" width="4" height="16"></rect>
+                                            <rect x="14" y="4" width="4" height="16"></rect>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                                        </>
+                                    )}
+                                </svg>
+                                <span>{isAudioPlaying ? 'Playing' : 'Listen'}</span>
+                            </button>
                         )}
-                        <span>{copiedCite ? 'Copied' : 'Cite'}</span>
-                    </button>
-                    {onToggleBookmark && (
                         <button
                             type="button"
-                            className={`card-action-btn card-bookmark-btn ${isBookmarked ? 'active' : ''}`}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleBookmark(study.id);
-                            }}
-                            aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark paper'}
-                            title={isBookmarked ? 'Remove bookmark' : 'Bookmark paper'}
+                            className={`card-action-btn cite-btn ${copiedCite ? 'copied' : ''}`}
+                            onClick={handleQuickCite}
+                            title="Copy APA citation to clipboard"
                         >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                            </svg>
-                            <span>{isBookmarked ? 'Saved' : 'Save'}</span>
+                            {copiedCite ? (
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            ) : (
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <path d="M6 9a3 3 0 0 1 3-3h1v4H8a1 1 0 0 0-1 1v1h3v4H6V9zm8 0a3 3 0 0 1 3-3h1v4h-2a1 1 0 0 0-1 1v1h3v4h-4V9z"></path>
+                                </svg>
+                            )}
+                            <span>{copiedCite ? 'Copied' : 'Cite'}</span>
                         </button>
-                    )}
+                        {onToggleBookmark && (
+                            <button
+                                type="button"
+                                className={`card-action-btn card-bookmark-btn ${isBookmarked ? 'active' : ''}`}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onToggleBookmark(study.id);
+                                }}
+                                aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark paper'}
+                                title={isBookmarked ? 'Remove bookmark' : 'Bookmark paper'}
+                            >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                                </svg>
+                                <span>{isBookmarked ? 'Saved' : 'Save'}</span>
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 

@@ -35,9 +35,7 @@
 .card-top-row {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    height: 28px;
-    min-height: 28px;
+    align-items: flex-start;
     margin-bottom: var(--spacing-3);
     gap: var(--spacing-2);
     flex-wrap: nowrap;
@@ -61,12 +59,11 @@
     padding: 0.2rem 0.55rem;
     border-radius: var(--radius-sm);
     letter-spacing: 0.02em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
+    white-space: normal;
+    word-break: break-word;
+    max-width: 160px;
     flex-shrink: 1;
-    line-height: 1.2;
+    line-height: 1.35;
 }
 
 .disc-icon {
@@ -77,11 +74,29 @@
 .card-actions {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.25rem;
     flex-shrink: 0;
     margin-left: auto;
+    align-self: flex-start;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.card-actions-oa {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    margin-bottom: 0.2rem;
+}
+
+.card-action-btns {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
     white-space: nowrap;
 }
+
 
 .card-action-btn {
     display: inline-flex;
@@ -151,6 +166,22 @@
     line-height: 1;
     white-space: nowrap;
     flex-shrink: 0;
+}
+
+.lang-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    padding: 0.2rem 0.45rem;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    flex-shrink: 0;
+    line-height: 1;
 }
 
 .pill-ai-jit {

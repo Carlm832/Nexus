@@ -9,6 +9,8 @@ import SubmitModal from './components/SubmitModal';
 import AuthModal from './components/AuthModal';
 import AccountModal from './components/AccountModal';
 import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
+import AudioMicroPlayer from './components/AudioMicroPlayer';
+import { globalAudio } from './utils/audioController';
 import { supabase } from './lib/supabase';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? '';
@@ -54,6 +56,18 @@ function App() {
   const [selectedDisciplines, setSelectedDisciplines] = useState([]);
   const [papers, setPapers] = useState(mockStudies);
   const [isLiveBackend, setIsLiveBackend] = useState(false);
+
+  // Global Audio Player State
+  const [audioState, setAudioState] = useState(globalAudio.getState());
+
+  useEffect(() => {
+    const unsubscribe = globalAudio.subscribe(setAudioState);
+    return unsubscribe;
+  }, []);
+
+  const handlePlayAudio = useCallback((study) => {
+    globalAudio.playPaper(study);
+  }, []);
 
   // Researcher Profile & Reading History
   const [userProfile, setUserProfile] = useState(() => {
@@ -578,11 +592,23 @@ function App() {
         if (study) toggleBookmark(study.id);
         return;
       }
+
+      // A → toggle audio playback
+      if (e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        if (audioState.activePaper) {
+          globalAudio.togglePlay();
+        } else if (focusedCardIndex >= 0) {
+          const study = activeStudies[focusedCardIndex];
+          if (study) globalAudio.playPaper(study);
+        }
+        return;
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedArticle, isCurationOpen, isSubmitOpen, isAuthOpen, isAccountOpen, isShortcutsOpen, focusedCardIndex, activeStudies, handleBackToFeed, handleSelectArticle, toggleBookmark]);
+  }, [selectedArticle, isCurationOpen, isSubmitOpen, isAuthOpen, isAccountOpen, isShortcutsOpen, focusedCardIndex, activeStudies, handleBackToFeed, handleSelectArticle, toggleBookmark, audioState.activePaper]);
 
   const toggleDiscipline = (disc) => {
     setSelectedDisciplines(prev =>
@@ -599,7 +625,7 @@ function App() {
   }, []);
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${audioState.activePaper ? 'has-audio-player' : ''}`}>
       {/* JIT Synthesis Modal Overlay */}
       {synthesizingPaper && (
         <div className="modal-overlay" role="dialog" aria-modal="true">
@@ -954,6 +980,8 @@ function App() {
                   onClick={handleSelectArticle}
                   isBookmarked={bookmarks.includes(study.id)}
                   onToggleBookmark={toggleBookmark}
+                  onPlayAudio={handlePlayAudio}
+                  isAudioPlaying={audioState.isPlaying && (audioState.activePaper?.id === study.id || (study.doi && audioState.activePaper?.doi === study.doi))}
                   isFocused={focusedCardIndex === idx}
                   cardRef={el => { cardRefs.current[idx] = el; }}
                 />
@@ -1007,6 +1035,24 @@ function App() {
           />
         )}
       </main>
+
+      {/* Persistent Audio Micro-Player */}
+      {audioState.activePaper && (
+        <AudioMicroPlayer
+          paper={audioState.activePaper}
+          isPlaying={audioState.isPlaying}
+          currentTime={audioState.currentTime}
+          duration={audioState.duration}
+          playbackRate={audioState.playbackRate}
+          isGenerating={audioState.isGenerating}
+          mode={audioState.mode}
+          onTogglePlay={() => globalAudio.togglePlay()}
+          onSeek={(t) => globalAudio.seek(t)}
+          onChangeSpeed={(rate) => globalAudio.setPlaybackRate(rate)}
+          onOpenPaper={(paper) => handleSelectArticle(paper)}
+          onClose={() => globalAudio.close()}
+        />
+      )}
     </div>
   );
 }

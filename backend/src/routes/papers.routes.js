@@ -115,4 +115,23 @@ router.post('/jit-synthesize', aiLimiter, async (req, res, next) => {
     }
 });
 
+/**
+ * POST /api/papers/translate
+ * Translates a paper's synthesis, methodology, and significance to the target language.
+ */
+router.post('/translate', aiLimiter, async (req, res, next) => {
+    try {
+        const { study, targetLanguage } = req.body;
+        if (!study || !targetLanguage) {
+            return res.status(400).json({ error: 'Study payload and targetLanguage are required' });
+        }
+
+        const { translateStudy } = require('../services/llm');
+        const translation = await translateStudy({ study, targetLanguage });
+        res.json(translation);
+    } catch (err) {
+        next(err);
+    }
+});
+
 module.exports = router;

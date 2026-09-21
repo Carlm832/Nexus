@@ -169,6 +169,7 @@ async function searchGlobalPapers({
                 discipline: inferredDiscipline,
                 reviewStatus: item.type === 'preprint' ? 'preReview' : 'peerReviewed',
                 citations: item.cited_by_count || 0,
+                language: item.language || 'en',
                 isOpenAccess: !!oaInfo.is_oa,
                 oaUrl: oaUrl,
                 pdfUrl: primaryLocation.pdf_url || (oaInfo.is_oa ? oaUrl : null),

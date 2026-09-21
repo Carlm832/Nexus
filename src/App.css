@@ -3,6 +3,11 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  transition: padding-bottom var(--transition-normal);
+}
+
+.app-container.has-audio-player {
+  padding-bottom: 76px;
 }
 
 .main-header {
