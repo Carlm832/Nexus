@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus — Platform Architecture & Visual Developer Briefing</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --bg-body: #0b0f19;
+            --bg-surface: #111827;
+            --bg-elevated: #1f2937;
+            --border-subtle: #1e293b;
+            --border-strong: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-tertiary: #64748b;
+            --accent-primary: #6366f1;
+            --accent-hover: #4f46e5;
+            --accent-subtle: rgba(99, 102, 241, 0.15);
+            --accent-border: rgba(99, 102, 241, 0.35);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            --font-serif: 'Newsreader', Georgia, serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --shadow-lg: 0 12px 32px -4px rgba(0, 0, 0, 0.5);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-body);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 2.5rem 1.5rem 6rem;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        header.hero {
+            text-align: center;
+            margin-bottom: 3.5rem;
+            padding: 3rem 2rem;
+            background: linear-gradient(180deg, rgba(99, 102, 241, 0.08) 0%, transparent 100%);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.9rem;
+            background: var(--accent-subtle);
+            border: 1px solid var(--accent-border);
+            border-radius: 9999px;
+            font-size: 0.8125rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 1.25rem;
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.75rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .hero-subtitle {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            max-width: 760px;
+            margin: 0 auto 1.5rem;
+        }
+
+        .section-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 2.5rem;
+            margin-bottom: 2.5rem;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.75rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .section-title {
+            font-family: var(--font-serif);
+            font-size: 1.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .gallery-container {
+            position: relative;
+            background: #000000;
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .gallery-slide {
+            display: none;
+            text-align: center;
+        }
+
+        .gallery-slide.active {
+            display: block;
+        }
+
+        .gallery-slide img {
+            width: 100%;
+            max-height: 580px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .slide-caption {
+            padding: 1rem 1.5rem;
+            background: var(--bg-elevated);
+            border-top: 1px solid var(--border-subtle);
+            text-align: left;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .slide-caption strong {
+            color: var(--accent-primary);
+        }
+
+        .gallery-nav {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            padding: 0.5rem 0.9rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .nav-btn:hover {
+            border-color: var(--border-strong);
+            color: var(--text-primary);
+        }
+
+        .nav-btn.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: #ffffff;
+        }
+
+        .mermaid-container {
+            background: #0f172a;
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .feature-card {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.15rem;
+            margin-bottom: 0.6rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        table.tech-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        table.tech-table th, table.tech-table td {
+            padding: 0.85rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        table.tech-table th {
+            background: var(--bg-elevated);
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        table.tech-table td strong {
+            color: var(--accent-primary);
+        }
+
+        .feedback-list {
+            list-style: none;
+            counter-reset: feedback-counter;
+        }
+
+        .feedback-list li {
+            counter-increment: feedback-counter;
+            position: relative;
+            padding-left: 2.75rem;
+            margin-bottom: 1.25rem;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .feedback-list li::before {
+            content: counter(feedback-counter);
+            position: absolute;
+            left: 0;
+            top: -2px;
+            width: 2rem;
+            height: 2rem;
+            background: var(--accent-subtle);
+            border: 1px solid var(--accent-border);
+            color: var(--accent-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .feedback-list li strong {
+            color: var(--text-primary);
+            display: block;
+            margin-bottom: 0.2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Hero Header -->
+        <header class="hero">
+            <div class="hero-badge">⚡ Engineering Briefing</div>
+            <h1>Nexus Research Intelligence Platform</h1>
+            <p class="hero-subtitle">
+                Deconstructing 250M+ peer-reviewed scientific works into multi-perspective AI syntheses, grounded conversational exploration, persistent studio audio narrations, and instant multilingual translations.
+            </p>
+        </header>
+
+        <!-- Section 1: Visual Interactive Tour -->
+        <section class="section-card">
+            <div class="section-header">
+                <h2 class="section-title">🖼️ Live Visual Walkthrough</h2>
+                <span style="font-size: 0.85rem; color: var(--text-tertiary);">Interactive Tour</span>
+            </div>
+
+            <div class="gallery-container">
+                <div class="gallery-slide active" data-slide="0">
+                    <img src="./docs/assets/home_feed_initial_1789986861427.png" alt="Nexus Home Discovery Feed">
+                    <div class="slide-caption">
+                        <div><strong>1. Home Discovery Feed:</strong> Curated editorial grid with discipline taxonomy pills, instant citation counters, and Open Access indicators.</div>
+                    </div>
+                </div>
+
+                <div class="gallery-slide" data-slide="1">
+                    <img src="./docs/assets/ai_filter_results_1789986958471.png" alt="Instant Discipline Filtering">
+                    <div class="slide-caption">
+                        <div><strong>2. Sub-Second Filtering:</strong> Zero-latency taxonomy filtering and full OpenAlex scholarly indexing across 250M+ papers.</div>
+                    </div>
+                </div>
+
+                <div class="gallery-slide" data-slide="2">
+                    <img src="./docs/assets/article_plain_synthesis_1789987046742.png" alt="Multi-Perspective Synthesis">
+                    <div class="slide-caption">
+                        <div><strong>3. Plain Language Synthesis:</strong> Gemini-extracted methodology & findings decomposed for curious builders without sensationalism.</div>
+                    </div>
+                </div>
+
+                <div class="gallery-slide" data-slide="3">
+                    <img src="./docs/assets/article_real_world_impact_1789987260291.png" alt="Real-World Impact Analysis">
+                    <div class="slide-caption">
+                        <div><strong>4. Real-World Impact Breakdown:</strong> Isolates practical industry applications, policy implications, and cross-discipline utility.</div>
+                    </div>
+                </div>
+
+                <div class="gallery-slide" data-slide="4">
+                    <img src="./docs/assets/article_methodology_limits_1789987494148.png" alt="Methodology & Limitations">
+                    <div class="slide-caption">
+                        <div><strong>5. Methodological Rigor & Limitations:</strong> Transparent review of study design, sample sizes, and evidentiary confidence ratings.</div>
+                    </div>
+                </div>
+
+                <div class="gallery-slide" data-slide="5">
+                    <img src="./docs/assets/article_spanish_translation_1789987940629.png" alt="Instant Multilingual Translation">
+                    <div class="slide-caption">
+                        <div><strong>6. Multilingual Scholarly Synthesis:</strong> 1-click dynamic translation preserving academic precision across 10+ global languages.</div>
+                    </div>
+                </div>
+
+                <div class="gallery-slide" data-slide="6">
+                    <img src="./docs/assets/home_feed_with_persistent_player_1789989418292.png" alt="Persistent Audio Micro-Player">
+                    <div class="slide-caption">
+                        <div><strong>7. Persistent Global Audio:</strong> Singleton audio state machine providing seamless studio/TTS narration during background navigation.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gallery-nav">
+                <button class="nav-btn active" onclick="setSlide(0)">1. Discovery Feed</button>
+                <button class="nav-btn" onclick="setSlide(1)">2. Category Filter</button>
+                <button class="nav-btn" onclick="setSlide(2)">3. Plain Synthesis</button>
+                <button class="nav-btn" onclick="setSlide(3)">4. Real-World Impact</button>
+                <button class="nav-btn" onclick="setSlide(4)">5. Limitations & Evidence</button>
+                <button class="nav-btn" onclick="setSlide(5)">6. AI Translation</button>
+                <button class="nav-btn" onclick="setSlide(6)">7. Persistent Audio</button>
+            </div>
+        </section>
+
+        <!-- Section 2: Architecture & Data Flows -->
+        <section class="section-card">
+            <div class="section-header">
+                <h2 class="section-title">📐 High-Level System Architecture</h2>
+                <span style="font-size: 0.85rem; color: var(--text-tertiary);">Decoupled Full-Stack Architecture</span>
+            </div>
+
+            <div class="mermaid-container">
+                <pre class="mermaid">
+graph TB
+    subgraph Client ["Frontend Client (React 19 + Vite)"]
+        UI["Editorial UI System"]
+        Audio["Global Audio Manager<br/>(Persistent HTML5 / TTS)"]
+        Chat["Grounded Chat Engine"]
+        Router["Client Route / State Sync"]
+    end
+
+    subgraph Gateway ["Express Backend API (Node.js)"]
+        Sec["Security Middleware<br/>(Helmet, CORS, Rate Limiters)"]
+        Ingest["JIT Ingestion Pipeline"]
+        LLM_SVC["LLM & Translation Service"]
+        TTS_SVC["Audio Narration Service"]
+    end
+
+    subgraph External ["External Intelligence & APIs"]
+        OpenAlex["OpenAlex API<br/>(250M+ Scholarly Works Graph)"]
+        Gemini["Google Gemini 2.5/1.5 Flash<br/>(Structured JSON Extraction)"]
+        ElevenLabs["ElevenLabs Studio Voice / Web Speech"]
+    end
+
+    subgraph Storage ["Persistent Storage & Auth"]
+        SupaDB[("Supabase PostgreSQL DB<br/>RLS Enabled")]
+        SupaAuth["Supabase Auth (JWT)"]
+        DiskCache[("Local Disk & JSON Cache")]
+    end
+
+    UI --> Audio
+    UI --> Chat
+    UI --> Router
+    UI <-->|REST API / JSON| Sec
+    Sec --> Ingest
+    Sec --> LLM_SVC
+    Sec --> TTS_SVC
+
+    Ingest <--> OpenAlex
+    LLM_SVC <--> Gemini
+    TTS_SVC <--> ElevenLabs
+    Ingest <--> SupaDB
+    Ingest <--> DiskCache
+    Client <--> SupaAuth
+                </pre>
+            </div>
+
+            <div class="grid-2">
+                <div class="feature-card">
+                    <h3>⚡ Just-In-Time (JIT) Ingestion</h3>
+                    <p>Unindexed DOIs are resolved against OpenAlex in real-time, transformed via structured Gemini JSON directives into multi-perspective takeaways, and permanently cached in Supabase.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🛡️ Grounded Chat Guardrails</h3>
+                    <p>"Ask the Paper" enforces strict citation boundaries directly against paper abstracts and findings, eliminating hallucinations when answering deep methodological queries.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🎧 Global Background Audio</h3>
+                    <p>Event-driven singleton controller maintains uninterrupted audio narration across feed navigation, search filters, and article views with Web Speech API instant fallback.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🌐 10+ Language Scholarly Engine</h3>
+                    <p>Dynamic academic translation engine tuned for rigorous scientific accuracy across Spanish, German, French, Turkish, Chinese, Japanese, Portuguese, Italian, Arabic, and Russian.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Tech Stack -->
+        <section class="section-card">
+            <div class="section-header">
+                <h2 class="section-title">🛠️ Technology Stack Breakdown</h2>
+            </div>
+
+            <table class="tech-table">
+                <thead>
+                    <tr>
+                        <th>Layer</th>
+                        <th>Technologies</th>
+                        <th>Architecture Role</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Frontend SPA</strong></td>
+                        <td>React 19, Vite, Vanilla CSS Design System</td>
+                        <td>High-contrast editorial UI (zero glassmorphism), keyboard navigation (J/K/B/A), dynamic theme tokens.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Backend API</strong></td>
+                        <td>Node.js, Express.js</td>
+                        <td>REST endpoints, rate limiting, path traversal defense, ElevenLabs binary streaming.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>AI / LLM Engine</strong></td>
+                        <td>Google Gemini 2.5 Flash / 1.5 Flash</td>
+                        <td>Structured JSON synthesis, multilingual translations, grounded conversational Q&A.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Academic Index</strong></td>
+                        <td>OpenAlex Works API, Crossref</td>
+                        <td>Indexing 250M+ scholarly records, author disambiguation, Open Access PDF resolution.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Audio Pipeline</strong></td>
+                        <td>ElevenLabs API + Web Speech API</td>
+                        <td>High-fidelity studio voice narration with zero-latency browser speech fallback.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Database & Security</strong></td>
+                        <td>Supabase (PostgreSQL), JWT Auth, RLS</td>
+                        <td>User bookmark synchronization, reading history, community curation, strict row-level security.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Section 4: Developer Review Prompts -->
+        <section class="section-card">
+            <div class="section-header">
+                <h2 class="section-title">💬 Developer Feedback & Discussion Points</h2>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">
+                When sharing this briefing with your engineering peers, ask for their critique on these core architectural decisions:
+            </p>
+
+            <ul class="feedback-list">
+                <li>
+                    <strong>JIT On-Demand Synthesis vs. Pre-computed Batch Ingestion</strong>
+                    Is our real-time JIT Gemini synthesis pipeline for unindexed DOIs fast enough for scale, or should we run batch indexing for the top 50,000 most cited papers?
+                </li>
+                <li>
+                    <strong>State Management & Singleton Audio Controller</strong>
+                    How do you evaluate our singleton `GlobalAudioManager` event-subscriber pattern versus migrating to a centralized store like Zustand for complex audio queues?
+                </li>
+                <li>
+                    <strong>Deep PDF RAG Chunking vs. Abstract Grounding</strong>
+                    For full-text 30+ page PDF papers, what hybrid chunking / vector search strategy would best complement our current abstract-grounded model?
+                </li>
+                <li>
+                    <strong>Editorial Design Aesthetics vs. Dashboard Frameworks</strong>
+                    Does the custom high-contrast typography and solid surface styling offer better scannability than standard Material/Tailwind dashboard UI kits?
+                </li>
+            </ul>
+        </section>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.gallery-slide');
+        const buttons = document.querySelectorAll('.nav-btn');
+
+        function setSlide(index) {
+            slides.forEach((s, i) => s.classList.toggle('active', i === index));
+            buttons.forEach((b, i) => b.classList.toggle('active', i === index));
+            currentSlide = index;
+        }
+    </script>
+</body>
+</html>
