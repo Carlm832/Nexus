@@ -24,12 +24,22 @@ router.get('/live', validateSearchQuery, async (req, res, next) => {
             to_year = null,
             open_access = 'false',
             sort = null,
+            source = 'openalex',
             page = 1,
             per_page = 20
         } = req.query;
 
+        if (source !== 'openalex') {
+            return res.status(501).json({
+                results: [],
+                total: 0,
+                source,
+                error: `${source} search requires provider API credentials and is not configured for this Nexus instance.`
+            });
+        }
+
         // Build deterministic cache key
-        const cacheKey = `search:${q.trim().toLowerCase()}:${discipline}:${from_year}:${to_year}:${open_access}:${sort}:${page}:${per_page}`;
+        const cacheKey = `search:${source}:${q.trim().toLowerCase()}:${discipline}:${from_year}:${to_year}:${open_access}:${sort}:${page}:${per_page}`;
 
         // 1. Check in-memory cache
         const cached = searchCache.get(cacheKey);

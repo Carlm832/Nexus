@@ -86,7 +86,7 @@ export default function AuthModal({ isOpen, onClose, onLogin }) {
                 <div className="modal-body">
                     <p className="modal-description" style={{ marginBottom: '1.5rem' }}>
                         {mode === 'signup'
-                            ? 'Create a researcher profile to submit DOIs, save feeds, and download audio syntheses.'
+                            ? 'Create a researcher profile to save research, sync your library, and download audio syntheses.'
                             : 'Sign in to access your saved research, custom feeds, and audio downloads.'}
                     </p>
 

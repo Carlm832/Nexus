@@ -59,20 +59,14 @@
 
 .logo-svg {
   display: block;
-  height: 40px;
-  width: auto;
+  height: 36px;
+  width: 36px;
   user-select: none;
-  color: var(--text-primary);
   transition: opacity 0.15s ease;
 }
 
 .logo-svg:hover {
   opacity: 0.85;
-}
-
-/* Keep logo colors consistent and vibrant across both light and dark themes */
-[data-theme="dark"] .logo-svg {
-  /* Logo colors preserved identical to light mode */
 }
 
 .nav-links {
@@ -81,12 +75,24 @@
 }
 
 .logo-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
   background: transparent;
   border: none;
   padding: 0;
   cursor: pointer;
   font: inherit;
-  color: inherit;
+  color: var(--text-primary);
+}
+
+.logo-wordmark {
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-primary);
 }
 
 .nav-links a,
@@ -423,6 +429,15 @@
   max-width: 540px;
   text-align: center;
   padding: var(--spacing-8) var(--spacing-6);
+  position: relative;
+}
+
+.jit-modal-actions {
+  position: absolute;
+  top: var(--spacing-3);
+  right: var(--spacing-3);
+  display: flex;
+  gap: var(--spacing-2);
 }
 
 .jit-spinner {
@@ -458,6 +473,128 @@
 .jit-step.active {
   color: var(--accent-primary);
   font-weight: 600;
+}
+
+.jit-secondary-btn,
+.jit-danger-btn {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.jit-secondary-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.jit-danger-btn {
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.35);
+}
+
+.jit-danger-btn:hover {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: #dc2626;
+}
+
+.synthesis-toast {
+  position: fixed;
+  right: var(--spacing-5);
+  bottom: calc(var(--spacing-5) + 76px);
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  width: min(520px, calc(100vw - 2rem));
+  padding: var(--spacing-3);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--accent-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-elevated);
+}
+
+.synthesis-toast.ready {
+  border-left-color: #10b981;
+}
+
+.synthesis-toast.error,
+.synthesis-toast.cancelled {
+  border-left-color: #dc2626;
+}
+
+.synthesis-toast div {
+  flex: 1;
+  min-width: 0;
+}
+
+.synthesis-toast strong,
+.synthesis-toast span {
+  display: block;
+}
+
+.synthesis-toast strong {
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  margin-bottom: 0.15rem;
+}
+
+.synthesis-toast span {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-status-row {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  margin: 0 auto var(--spacing-4);
+  max-width: 980px;
+}
+
+.source-chip {
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border-radius: var(--radius-full);
+  padding: 0.28rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.source-chip.connected {
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.source-chip.requiresAccess {
+  color: var(--text-tertiary);
+}
+
+.source-chip.active {
+  color: #ffffff;
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.source-notice {
+  max-width: 900px;
+  margin: 0 auto var(--spacing-4);
+  padding: var(--spacing-3) var(--spacing-4);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  border-color: var(--border-strong);
+  background: var(--bg-surface);
 }
 
 /* Quick Disciplines Bar */

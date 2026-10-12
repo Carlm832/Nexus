@@ -1,5 +1,93 @@
 [
   {
+    "id": "10.1585/pfr.15.2402039",
+    "title": "Radiation Resistant Camera System for Monitoring Deuterium Plasma Discharges in the Large Helical Device",
+    "authors": [
+      "M. Shoji",
+      "LHD Experiment Group"
+    ],
+    "journal": "Plasma and Fusion Research",
+    "publishDate": "2020-06-08",
+    "doi": "https://doi.org/10.1585/pfr.15.2402039",
+    "abstract": "Radiation resistant camera system was constructed for monitoring deuterium plasma discharges in the Large Helical Device (LHD). This system has contributed to safe operation during two experimental campaigns without serious problems due to radiation (neutrons and gamma-rays). The cameras steadily functioned even in the plasma discharge with the maximum neutron emission rate in FY 2017, though some bright specks temporarily appeared on the images. The cameras have been installed in shield boxes which consist of lead boxes covered with 10% borated polyethylene blocks in all directions. For optimizing the design of the shield box, the radiation flux distribution was calculated by MCNP-6 code, which reveals the reduction of the radiation flux and the change of the energy spectra in the shield box. Thanks to the optimization, significant extension of the lifetime of the cameras has been realized. Investigation of the influence of the radiation on the CCD image sensor shows that the number of bright specks generally increases with the radiation flux to the camera, which also indicates that some bright specks disappear by the self-annealing process on the image sensor. This phenomenon also highly contributes to the further extension of the lifetime of the radiation resistant cameras.",
+    "discipline": "Biology",
+    "summary": "Researchers developed and deployed a specialized radiation-resistant camera system to monitor deuterium plasma discharges within the Large Helical Device. The setup utilizes custom shielding boxes composed of lead and borated polyethylene, the design of which was optimized using MCNP-6 radiation transport simulations. Operating successfully across multiple experimental campaigns, the system endured high neutron and gamma-ray fluxes, with CCD image sensors demonstrating resilience supported by observed self-annealing processes.",
+    "significance": "This advancement ensures continuous, safe visual monitoring of extreme fusion plasma environments where severe radiation typically degrades optical equipment. Optimizing camera longevity and shielding design is a critical engineering step toward reliable diagnostics in future large-scale nuclear fusion reactors.",
+    "limitations": "While field-tested over two experimental campaigns, the study primarily evaluates a specific camera setup and shielding configuration within one distinct fusion device. Further testing under even higher neutron yields and prolonged operational lifespans will be necessary to fully characterize sensor degradation limits.",
+    "metrics": {
+      "evidenceLevel": "High",
+      "citations": 801217,
+      "studyType": "Computational and Experimental"
+    },
+    "tags": [
+      "Nuclear Fusion",
+      "Plasma Diagnostics",
+      "Radiation Shielding",
+      "CCD Image Sensors",
+      "Large Helical Device"
+    ],
+    "oaUrl": "https://www.jstage.jst.go.jp/article/pfr/15/0/15_2402039/_pdf"
+  },
+  {
+    "id": "10.1191/1478088706qp063oa",
+    "title": "Using thematic analysis in psychology",
+    "authors": [
+      "Virginia Braun",
+      "Victoria Clarke"
+    ],
+    "journal": "Qualitative Research in Psychology",
+    "publishDate": "2006-01-01",
+    "doi": "https://doi.org/10.1191/1478088706qp063oa",
+    "abstract": "Thematic analysis is a poorly demarcated, rarely acknowledged, yet widely used qualitative analytic method within psychology. In this paper, we argue that it offers an accessible and theoretically flexible approach to analysing qualitative data. We outline what thematic analysis is, locating it in relation to other qualitative analytic methods that search for themes or patterns, and in relation to different epistemological and ontological positions. We then provide clear guidelines to those wanting to start thematic analysis, or conduct it in a more deliberate and rigorous way, and consider potential pitfalls in conducting thematic analysis. Finally, we outline the disadvantages and advantages of thematic analysis. We conclude by advocating thematic analysis as a useful and flexible method for qualitative research in and beyond psychology.",
+    "discipline": "Psychology",
+    "summary": "This seminal methodology paper provides a structured, six-phase guide for conducting thematic analysis to identify, analyze, and report patterns within qualitative data. The authors establish thematic analysis as an independent and theoretically flexible method adaptable across diverse epistemological positions rather than a sub-method bound to specific theories. The paper outlines key procedural steps, common analytic pitfalls, and best practices to ensure rigor and consistency in qualitative research.",
+    "significance": "This framework democratized qualitative research by establishing a standardized, highly accessible, and rigorous analytic method used extensively across the social and behavioral sciences. It bridged the gap between complex qualitative theory and practical research execution, becoming one of the most cited qualitative papers in modern academia.",
+    "limitations": "As a conceptual methodological framework rather than an empirical study, its utility depends entirely on the subjective rigor and reflexivity of the individual researcher. Furthermore, the method's broad flexibility can lead to inconsistent application if theoretical assumptions are not explicitly defined.",
+    "metrics": {
+      "evidenceLevel": "High",
+      "citations": 193584,
+      "studyType": "Methodological Framework"
+    },
+    "tags": [
+      "Thematic Analysis",
+      "Qualitative Methodology",
+      "Psychology",
+      "Data Analysis",
+      "Thematic analysis"
+    ],
+    "oaUrl": "https://www.tandfonline.com/doi/abs/10.1191/1478088706qp063oa"
+  },
+  {
+    "id": "10.1162/neco.1997.9.8.1735",
+    "title": "Long Short-Term Memory",
+    "authors": [
+      "Sepp Hochreiter",
+      "Jürgen Schmidhuber"
+    ],
+    "journal": "Neural Computation",
+    "publishDate": "1997-11-01",
+    "doi": "https://doi.org/10.1162/neco.1997.9.8.1735",
+    "abstract": "Learning to store information over extended time intervals by recurrent backpropagation takes a very long time, mostly because of insufficient, decaying error backflow. We briefly review Hochreiter's (1991) analysis of this problem, then address it by introducing a novel, efficient, gradient-based method called long short-term memory (LSTM). Truncating the gradient where this does not do harm, LSTM can learn to bridge minimal time lags in excess of 1000 discrete-time steps by enforcing constant error flow through constant error carousels within special units. Multiplicative gate units learn to open and close access to the constant error flow. LSTM is local in space and time; its computational complexity per time step and weight is O(1). Our experiments with artificial data involve local, distributed, real-valued, and noisy pattern representations. In comparisons with real-time recurrent learning, back propagation through time, recurrent cascade correlation, Elman nets, and neural sequence chunking, LSTM leads to many more successful runs, and learns much faster. LSTM also solves complex, artificial long-time-lag tasks that have never been solved by previous recurrent network algorithms.",
+    "discipline": "Artificial Intelligence",
+    "summary": "Traditional recurrent neural networks struggle to learn long-term dependencies because gradient signals decay or explode rapidly over time. To solve this vanishing gradient problem, the authors introduce Long Short-Term Memory (LSTM), a novel network architecture that enforces constant error flow through specialized storage units. Controlled by multiplicative gating mechanisms that open and close access to memory, LSTM successfully bridges time lags exceeding 1,000 discrete steps with an efficient O(1) computational complexity per time step.",
+    "significance": "This landmark paper introduced the LSTM architecture, which fundamentally reshaped sequence processing in modern machine learning. It laid the technological foundation for breakthroughs in speech recognition, machine translation, and natural language processing.",
+    "limitations": "The empirical evaluations presented in this foundational paper were conducted primarily on synthetic, artificial tasks rather than messy, real-world datasets. Additionally, the necessary truncation of gradients to maintain computational efficiency might overlook certain edge-case dependencies.",
+    "reviewStatus": "peerReviewed",
+    "audioUrl": "/api/audio/10_1162_neco_1997_9_8_1735.mp3",
+    "metrics": {
+      "evidenceLevel": "Moderate",
+      "studyType": "Computational",
+      "citations": 101761
+    },
+    "tags": [
+      "Long Short-Term Memory",
+      "Recurrent Neural Networks",
+      "Deep Learning",
+      "Gradient Descent",
+      "Sequence Modeling"
+    ]
+  },
+  {
     "id": "W4288400169",
     "title": "Yaşlı Kadınlarda Üreme Sağlığı",
     "authors": [

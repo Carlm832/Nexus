@@ -133,3 +133,36 @@ export const SORT_OPTIONS = [
     { id: 'publication_date:desc', label: 'Most Recent' },
     { id: 'relevance_score:desc', label: 'Most Relevant' }
 ];
+
+export const RESEARCH_SOURCES = [
+    {
+        id: 'openalex',
+        label: 'OpenAlex',
+        status: 'connected',
+        description: 'Open scholarly metadata, citation counts, concepts, and Open Access links.'
+    },
+    {
+        id: 'sciencedirect',
+        label: 'ScienceDirect',
+        status: 'requiresAccess',
+        description: 'Elsevier article metadata and full-text workflows require Elsevier API access.'
+    },
+    {
+        id: 'scopus',
+        label: 'Scopus',
+        status: 'requiresAccess',
+        description: 'Elsevier citation index and bibliometrics require Scopus API entitlements.'
+    },
+    {
+        id: 'webofscience',
+        label: 'Web of Science',
+        status: 'requiresAccess',
+        description: 'Clarivate citation index access requires approved Web of Science API credentials.'
+    },
+    {
+        id: 'ieee',
+        label: 'IEEE Xplore',
+        status: 'requiresAccess',
+        description: 'Engineering and computing metadata requires an IEEE Xplore API key.'
+    }
+];

@@ -18,7 +18,6 @@ const papersRoutes = require('./routes/papers.routes');
 const searchRoutes = require('./routes/search.routes');
 const audioRoutes = require('./routes/audio.routes');
 const chatRoutes = require('./routes/chat.routes');
-const submitRoutes = require('./routes/submit.routes');
 
 const app = express();
 
@@ -48,7 +47,6 @@ app.use('/api/papers', papersRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api', audioRoutes);
 app.use('/api', chatRoutes);
-app.use('/api', submitRoutes);
 
 // 6. Healthcheck endpoint
 app.get('/api/health', (req, res) => {

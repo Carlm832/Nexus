@@ -1,11 +1,10 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 import { mockStudies } from './data/mockData';
-import { ACADEMIC_DOMAINS, disciplines, YEAR_FILTER_OPTIONS, SORT_OPTIONS } from './data/taxonomy';
+import { disciplines, YEAR_FILTER_OPTIONS, SORT_OPTIONS, RESEARCH_SOURCES } from './data/taxonomy';
 import ResearchCard from './components/ResearchCard';
 import ArticleView from './components/ArticleView';
 import CurationModal from './components/CurationModal';
-import SubmitModal from './components/SubmitModal';
 import AuthModal from './components/AuthModal';
 import AccountModal from './components/AccountModal';
 import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
@@ -44,7 +43,6 @@ function App() {
 
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [isCurationOpen, setIsCurationOpen] = useState(false);
-  const [isSubmitOpen, setIsSubmitOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
@@ -110,6 +108,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYearRange, setSelectedYearRange] = useState(YEAR_FILTER_OPTIONS[0]);
   const [selectedSort, setSelectedSort] = useState(SORT_OPTIONS[0].id);
+  const [selectedSource, setSelectedSource] = useState(RESEARCH_SOURCES[0].id);
   const [openAccessOnly, setOpenAccessOnly] = useState(false);
   const [viewBookmarksOnly, setViewBookmarksOnly] = useState(false);
 
@@ -117,15 +116,24 @@ function App() {
   const [globalResults, setGlobalResults] = useState([]);
   const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
   const [globalTotalCount, setGlobalTotalCount] = useState(0);
+  const [sourceNotice, setSourceNotice] = useState(null);
 
   // JIT synthesis loading state
   const [synthesizingPaper, setSynthesizingPaper] = useState(null);
+  const [isSynthesisMinimized, setIsSynthesisMinimized] = useState(false);
+  const [synthesisNotification, setSynthesisNotification] = useState(null);
   const [synthesisError, setSynthesisError] = useState(null);
 
   const searchInputRef = useRef(null);
   const searchDebounceRef = useRef(null);
+  const synthesisAbortRef = useRef(null);
+  const synthesisMinimizedRef = useRef(false);
 
   const isAuthenticated = Boolean(currentUser);
+
+  useEffect(() => {
+    synthesisMinimizedRef.current = isSynthesisMinimized;
+  }, [isSynthesisMinimized]);
 
   /* -----------------------------------------------------------------------
    * Supabase Auth: listen for session changes
@@ -259,6 +267,14 @@ function App() {
       })
       .catch(err => {
         console.warn("Using offline research cache:", err.message);
+        try {
+          const offlineSaved = JSON.parse(localStorage.getItem('nexus_offline_saved_papers') || '[]');
+          if (Array.isArray(offlineSaved) && offlineSaved.length > 0) {
+            setPapers(offlineSaved);
+          }
+        } catch {
+          // ignore
+        }
         setIsLiveBackend(false);
       });
   }, []);
@@ -266,8 +282,19 @@ function App() {
   /* -----------------------------------------------------------------------
    * Global Scholarly Search Query Execution (OpenAlex 250M+ Works)
    * --------------------------------------------------------------------- */
-  const executeGlobalSearch = useCallback(async (query, discipline, yearOption, sort, oaOnly) => {
+  const executeGlobalSearch = useCallback(async (query, discipline, yearOption, sort, oaOnly, sourceId) => {
+    const source = RESEARCH_SOURCES.find(item => item.id === sourceId) || RESEARCH_SOURCES[0];
+
+    if (source.status !== 'connected') {
+      setIsSearchingGlobal(false);
+      setGlobalResults([]);
+      setGlobalTotalCount(0);
+      setSourceNotice(`${source.label} requires institutional API credentials before Nexus can search it directly. OpenAlex remains available now.`);
+      return;
+    }
+
     setIsSearchingGlobal(true);
+    setSourceNotice(null);
     try {
       const params = new URLSearchParams();
       if (query && query.trim()) params.set('q', query.trim());
@@ -276,6 +303,7 @@ function App() {
       if (yearOption?.toYear) params.set('to_year', yearOption.toYear);
       if (oaOnly) params.set('open_access', 'true');
       if (sort) params.set('sort', sort);
+      if (sourceId) params.set('source', sourceId);
       params.set('per_page', '24');
 
       const res = await fetch(`${API_BASE}/api/search/live?${params.toString()}`);
@@ -299,13 +327,13 @@ function App() {
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
       searchDebounceRef.current = setTimeout(() => {
         const primaryDisc = selectedDisciplines[0] || '';
-        executeGlobalSearch(searchQuery, primaryDisc, selectedYearRange, selectedSort, openAccessOnly);
+        executeGlobalSearch(searchQuery, primaryDisc, selectedYearRange, selectedSort, openAccessOnly, selectedSource);
       }, 350);
     }
     return () => {
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     };
-  }, [searchMode, searchQuery, selectedDisciplines, selectedYearRange, selectedSort, openAccessOnly, executeGlobalSearch]);
+  }, [searchMode, searchQuery, selectedDisciplines, selectedYearRange, selectedSort, openAccessOnly, selectedSource, executeGlobalSearch]);
 
   const addToReadingHistory = useCallback((study) => {
     if (!study || !study.id) return;
@@ -361,6 +389,17 @@ function App() {
     }
   }, []);
 
+  const cancelSynthesis = useCallback(() => {
+    synthesisAbortRef.current?.abort();
+    synthesisAbortRef.current = null;
+    setSynthesizingPaper(null);
+    setIsSynthesisMinimized(false);
+    setSynthesisNotification({
+      status: 'cancelled',
+      message: 'Synthesis cancelled.'
+    });
+  }, []);
+
   /* -----------------------------------------------------------------------
    * Just-In-Time (JIT) Paper Selection & Gemini Synthesis
    * --------------------------------------------------------------------- */
@@ -384,15 +423,21 @@ function App() {
       return;
     }
 
-    // Otherwise, it's an uncached global paper from OpenAlex -> run JIT Gemini synthesis!
+    // Otherwise, it's an uncached global paper from OpenAlex -> run JIT Gemini synthesis.
+    synthesisAbortRef.current?.abort();
+    const controller = new AbortController();
+    synthesisAbortRef.current = controller;
     setSynthesizingPaper(study);
+    setIsSynthesisMinimized(false);
+    setSynthesisNotification(null);
     setSynthesisError(null);
 
     try {
       const res = await fetch(`${API_BASE}/api/papers/jit-synthesize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rawPaper: study })
+        body: JSON.stringify({ rawPaper: study }),
+        signal: controller.signal
       });
 
       if (!res.ok) throw new Error(`Synthesis failed with status ${res.status}`);
@@ -407,12 +452,21 @@ function App() {
         });
 
         addToReadingHistory(synthesized);
-        setSelectedArticle(synthesized);
-        const url = new URL(window.location.href);
-        url.searchParams.set('paper', synthesized.id);
-        window.history.pushState(null, '', url.toString());
+        if (synthesisMinimizedRef.current) {
+          setSynthesisNotification({
+            status: 'ready',
+            message: 'Synthesis ready.',
+            paper: synthesized
+          });
+        } else {
+          setSelectedArticle(synthesized);
+          const url = new URL(window.location.href);
+          url.searchParams.set('paper', synthesized.id);
+          window.history.pushState(null, '', url.toString());
+        }
       }
     } catch (err) {
+      if (err.name === 'AbortError') return;
       console.error('JIT synthesis error:', err);
       setSynthesisError(err.message || 'Failed to synthesize insights');
       // Fall back to showing the raw paper with abstract
@@ -423,9 +477,21 @@ function App() {
         limitations: 'Full analysis pending peer review indexing.'
       };
       addToReadingHistory(fallbackArticle);
-      setSelectedArticle(fallbackArticle);
+      if (synthesisMinimizedRef.current) {
+        setSynthesisNotification({
+          status: 'error',
+          message: 'Synthesis failed. Open the abstract-only fallback.',
+          paper: fallbackArticle
+        });
+      } else {
+        setSelectedArticle(fallbackArticle);
+      }
     } finally {
       setSynthesizingPaper(null);
+      setIsSynthesisMinimized(false);
+      if (synthesisAbortRef.current === controller) {
+        synthesisAbortRef.current = null;
+      }
     }
   }, [addToReadingHistory]);
 
@@ -503,12 +569,17 @@ function App() {
 
   // Collect full paper objects for saved bookmarks
   const savedPapersList = useMemo(() => {
-    const paperMap = new Map();
-    papers.forEach(p => paperMap.set(p.id, p));
-    globalResults.forEach(p => paperMap.set(p.id, p));
-    readingHistory.forEach(p => paperMap.set(p.id, p));
-    return bookmarks.map(id => paperMap.get(id) || { id, title: `Paper DOI: ${id}` }).filter(Boolean);
-  }, [papers, globalResults, readingHistory, bookmarks]);
+    const canonicalPapers = new Map(papers.map(p => [p.id, p]));
+    return bookmarks.map(id => canonicalPapers.get(id)).filter(Boolean);
+  }, [papers, bookmarks]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('nexus_offline_saved_papers', JSON.stringify(savedPapersList));
+    } catch {
+      // ignore
+    }
+  }, [savedPapersList]);
 
   const activeStudies = searchMode === 'global' ? globalResults : processedCuratedStudies;
 
@@ -523,7 +594,7 @@ function App() {
    * Esc → back to feed (when article is open)
    * --------------------------------------------------------------------- */
   useEffect(() => {
-    const anyModalOpen = isCurationOpen || isSubmitOpen || isAuthOpen || isAccountOpen || isShortcutsOpen;
+    const anyModalOpen = isCurationOpen || isAuthOpen || isAccountOpen || isShortcutsOpen;
 
     const handleKeyDown = (e) => {
       // Never hijack when user is typing in an input/textarea
@@ -608,7 +679,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedArticle, isCurationOpen, isSubmitOpen, isAuthOpen, isAccountOpen, isShortcutsOpen, focusedCardIndex, activeStudies, handleBackToFeed, handleSelectArticle, toggleBookmark, audioState.activePaper]);
+  }, [selectedArticle, isCurationOpen, isAuthOpen, isAccountOpen, isShortcutsOpen, focusedCardIndex, activeStudies, handleBackToFeed, handleSelectArticle, toggleBookmark, audioState.activePaper]);
 
   const toggleDiscipline = (disc) => {
     setSelectedDisciplines(prev =>
@@ -627,9 +698,25 @@ function App() {
   return (
     <div className={`app-container ${audioState.activePaper ? 'has-audio-player' : ''}`}>
       {/* JIT Synthesis Modal Overlay */}
-      {synthesizingPaper && (
+      {synthesizingPaper && !isSynthesisMinimized && (
         <div className="modal-overlay" role="dialog" aria-modal="true">
           <div className="modal-content editorial-card animate-fade-in jit-modal">
+            <div className="jit-modal-actions">
+              <button
+                type="button"
+                className="jit-secondary-btn"
+                onClick={() => setIsSynthesisMinimized(true)}
+              >
+                Minimize
+              </button>
+              <button
+                type="button"
+                className="jit-danger-btn"
+                onClick={cancelSynthesis}
+              >
+                Cancel
+              </button>
+            </div>
             <h3 className="heading-serif" style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
               Synthesizing Research with Gemini AI...
             </h3>
@@ -643,6 +730,45 @@ function App() {
         </div>
       )}
 
+      {(synthesizingPaper && isSynthesisMinimized) && (
+        <div className="synthesis-toast" role="status" aria-live="polite">
+          <div>
+            <strong>Synthesizing in background</strong>
+            <span>{synthesizingPaper.title}</span>
+          </div>
+          <button type="button" className="jit-secondary-btn" onClick={() => setIsSynthesisMinimized(false)}>
+            View
+          </button>
+          <button type="button" className="jit-danger-btn" onClick={cancelSynthesis}>
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {synthesisNotification && !synthesizingPaper && (
+        <div className={`synthesis-toast ${synthesisNotification.status}`} role="status" aria-live="polite">
+          <div>
+            <strong>{synthesisNotification.message}</strong>
+            {synthesisNotification.paper && <span>{synthesisNotification.paper.title}</span>}
+          </div>
+          {synthesisNotification.paper && (
+            <button
+              type="button"
+              className="jit-secondary-btn"
+              onClick={() => {
+                setSynthesisNotification(null);
+                handleSelectArticle(synthesisNotification.paper);
+              }}
+            >
+              Open
+            </button>
+          )}
+          <button type="button" className="jit-secondary-btn" onClick={() => setSynthesisNotification(null)}>
+            Dismiss
+          </button>
+        </div>
+      )}
+
       <header className="main-header editorial-card">
         <div className="logo-container">
           <button
@@ -652,12 +778,13 @@ function App() {
             aria-label="Nexus home feed"
           >
             <img
-              src="/nexus-logo.svg"
+              src="/nexus-icon.svg"
               alt="Nexus"
               className="logo-svg"
               height="40"
               draggable={false}
             />
+            <span className="logo-wordmark">Nexus</span>
           </button>
         </div>
 
@@ -692,23 +819,10 @@ function App() {
               handleBackToFeed();
             }}
           >
-            Saved ({bookmarks.length})
+            Saved ({savedPapersList.length})
           </button>
           <button type="button" className="nav-link" onClick={() => setIsCurationOpen(true)}>
             Disciplines {selectedDisciplines.length > 0 && `(${selectedDisciplines.length})`}
-          </button>
-          <button
-            type="button"
-            className="nav-link"
-            onClick={() => {
-              if (isAuthenticated) {
-                setIsSubmitOpen(true);
-              } else {
-                setIsAuthOpen(true);
-              }
-            }}
-          >
-            Submit DOI
           </button>
         </nav>
 
@@ -772,7 +886,6 @@ function App() {
         onClose={() => setIsAuthOpen(false)}
         onLogin={(user) => {
           setCurrentUser(user);
-          setIsSubmitOpen(true);
         }}
       />
 
@@ -803,15 +916,6 @@ function App() {
         onClose={() => setIsCurationOpen(false)}
         selectedDisciplines={selectedDisciplines}
         toggleDiscipline={toggleDiscipline}
-      />
-
-      <SubmitModal
-        isOpen={isSubmitOpen}
-        onClose={() => setIsSubmitOpen(false)}
-        onPaperAdded={(newPaper) => {
-          setPapers(prev => [newPaper, ...prev]);
-          handleSelectArticle(newPaper);
-        }}
       />
 
       <KeyboardShortcutsModal
@@ -863,7 +967,7 @@ function App() {
                     type="text"
                     placeholder={
                       searchMode === 'global'
-                        ? 'Search 250M+ papers by keyword, topic (e.g. CRISPR, LLM, Quantum), author, or title...'
+                        ? 'Search OpenAlex by keyword, DOI, topic, author, or title...'
                         : 'Search curated studies by title, summary, keyword, or author... (Press \'/\' to focus)'
                     }
                     value={searchQuery}
@@ -885,22 +989,40 @@ function App() {
                 <div className="academic-filter-row">
                   {/* Year Range Filter */}
                   {searchMode === 'global' && (
-                    <div className="filter-item">
-                      <label htmlFor="year-select" className="filter-label">Years:</label>
-                      <select
-                        id="year-select"
-                        value={selectedYearRange.label}
-                        onChange={(e) => {
-                          const match = YEAR_FILTER_OPTIONS.find(o => o.label === e.target.value);
-                          if (match) setSelectedYearRange(match);
-                        }}
-                        className="sort-select"
-                      >
-                        {YEAR_FILTER_OPTIONS.map(opt => (
-                          <option key={opt.label} value={opt.label}>{opt.label}</option>
-                        ))}
-                      </select>
-                    </div>
+                    <>
+                      <div className="filter-item">
+                        <label htmlFor="source-select" className="filter-label">Source:</label>
+                        <select
+                          id="source-select"
+                          value={selectedSource}
+                          onChange={(e) => setSelectedSource(e.target.value)}
+                          className="sort-select"
+                        >
+                          {RESEARCH_SOURCES.map(source => (
+                            <option key={source.id} value={source.id}>
+                              {source.label}{source.status === 'connected' ? '' : ' (setup required)'}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="filter-item">
+                        <label htmlFor="year-select" className="filter-label">Years:</label>
+                        <select
+                          id="year-select"
+                          value={selectedYearRange.label}
+                          onChange={(e) => {
+                            const match = YEAR_FILTER_OPTIONS.find(o => o.label === e.target.value);
+                            if (match) setSelectedYearRange(match);
+                          }}
+                          className="sort-select"
+                        >
+                          {YEAR_FILTER_OPTIONS.map(opt => (
+                            <option key={opt.label} value={opt.label}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
                   )}
 
                   {/* Sort Filter */}
@@ -929,6 +1051,26 @@ function App() {
                   </label>
                 </div>
               </div>
+
+              {searchMode === 'global' && (
+                <div className="source-status-row">
+                  {RESEARCH_SOURCES.map(source => (
+                    <span
+                      key={source.id}
+                      className={`source-chip ${source.id === selectedSource ? 'active' : ''} ${source.status}`}
+                      title={source.description}
+                    >
+                      {source.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {sourceNotice && (
+                <div className="source-notice editorial-card">
+                  {sourceNotice}
+                </div>
+              )}
 
               {/* Dynamic Academic Taxonomy Bar */}
               <div className="quick-disciplines-bar">
@@ -959,7 +1101,7 @@ function App() {
             <div className="feed-header-info">
               <span className="results-count">
                 {isSearchingGlobal ? (
-                  <span>Searching 250M+ scholarly works on OpenAlex...</span>
+                  <span>Searching {RESEARCH_SOURCES.find(source => source.id === selectedSource)?.label || 'scholarly sources'}...</span>
                 ) : (
                   <span>
                     Showing <strong>{activeStudies.length}</strong> {activeStudies.length === 1 ? 'study' : 'studies'}

@@ -19,13 +19,12 @@ describe('App', () => {
     render(<App />);
     expect(screen.getByAltText('Nexus')).toBeInTheDocument();
     expect(screen.getByText('Discover')).toBeInTheDocument();
-    expect(screen.getByText(/Curate Feed/i)).toBeInTheDocument();
-    expect(screen.getByText(/Submit Research/i)).toBeInTheDocument();
+    expect(screen.getByText(/Disciplines/i)).toBeInTheDocument();
   });
 
   it('renders search input and filters studies', () => {
     render(<App />);
-    const searchInput = screen.getByPlaceholderText(/Search studies/i);
+    const searchInput = screen.getByPlaceholderText(/Search curated studies/i);
     expect(searchInput).toBeInTheDocument();
 
     fireEvent.change(searchInput, { target: { value: 'Neuroplasticity' } });
@@ -34,7 +33,7 @@ describe('App', () => {
 
   it('opens and closes curation modal', () => {
     render(<App />);
-    const curateBtn = screen.getByText(/Curate Feed/i);
+    const curateBtn = screen.getByText(/Disciplines/i);
     fireEvent.click(curateBtn);
     expect(screen.getByText('Curate Your Feed')).toBeInTheDocument();
 

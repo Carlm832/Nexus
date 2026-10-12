@@ -247,7 +247,7 @@ export default function AccountModal({
                             <div>
                                 <h3 className="section-heading">Saved Research Papers</h3>
                                 <p className="section-subheading">
-                                    {savedPapers.length} {savedPapers.length === 1 ? 'paper' : 'papers'} in your permanent research collection.
+                                    {savedPapers.length} {savedPapers.length === 1 ? 'paper' : 'papers'} from the Nexus curated database, cached on this device for offline reading.
                                 </p>
                             </div>
                             {savedPapers.length > 0 && (
