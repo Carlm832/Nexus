@@ -886,6 +886,14 @@ function App() {
         onClose={() => setIsAuthOpen(false)}
         onLogin={(user) => {
           setCurrentUser(user);
+          if (user?.orcid) {
+            handleUpdateProfile({
+              ...(userProfile || {}),
+              name: user.name || userProfile?.name || `Researcher (${user.orcid.slice(-4)})`,
+              orcid: user.orcid,
+              institution: user.institution || userProfile?.institution || 'Verified Academic Institution'
+            });
+          }
         }}
       />
 

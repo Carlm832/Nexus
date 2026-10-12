@@ -20,6 +20,7 @@ export default function AccountModal({
     const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'library' | 'history' | 'preferences'
     const [fullName, setFullName] = useState(userProfile?.name || '');
     const [institution, setInstitution] = useState(userProfile?.institution || '');
+    const [orcidId, setOrcidId] = useState(userProfile?.orcid || currentUser?.orcid || '');
     const [academicRole, setAcademicRole] = useState(userProfile?.role || 'Graduate / PhD Researcher');
     const [selectedInterests, setSelectedInterests] = useState(userProfile?.interests || []);
     const [saveSuccess, setSaveSuccess] = useState(false);
@@ -29,11 +30,13 @@ export default function AccountModal({
         if (userProfile) {
             setFullName(userProfile.name || '');
             setInstitution(userProfile.institution || '');
+            setOrcidId(userProfile.orcid || currentUser?.orcid || '');
             setAcademicRole(userProfile.role || 'Graduate / PhD Researcher');
             setSelectedInterests(userProfile.interests || []);
         } else if (currentUser) {
             const emailName = (currentUser.email || '').split('@')[0];
             setFullName(emailName.charAt(0).toUpperCase() + emailName.slice(1));
+            if (currentUser.orcid) setOrcidId(currentUser.orcid);
         }
     }, [userProfile, currentUser]);
 
@@ -60,6 +63,7 @@ export default function AccountModal({
         onUpdateProfile({
             name: fullName,
             institution,
+            orcid: orcidId.trim().replace(/^https?:\/\/orcid\.org\//i, ''),
             role: academicRole,
             interests: selectedInterests
         });
@@ -123,9 +127,38 @@ export default function AccountModal({
                     <div className="account-user-banner">
                         <div className="account-avatar">{initials || 'R'}</div>
                         <div className="account-user-meta">
-                            <h2 className="heading-serif account-user-name">
-                                {fullName || userEmail.split('@')[0]}
-                            </h2>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                <h2 className="heading-serif account-user-name" style={{ margin: 0 }}>
+                                    {fullName || userEmail.split('@')[0]}
+                                </h2>
+                                {orcidId && (
+                                    <a
+                                        href={`https://orcid.org/${orcidId.replace(/^https?:\/\/orcid\.org\//i, '')}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        title="Verified ORCID Researcher Profile"
+                                        style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '0.3rem',
+                                            padding: '0.15rem 0.5rem',
+                                            borderRadius: '12px',
+                                            background: 'rgba(166, 206, 57, 0.15)',
+                                            border: '1px solid #A6CE39',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 600,
+                                            color: 'var(--text-primary)',
+                                            textDecoration: 'none'
+                                        }}
+                                    >
+                                        <svg width="14" height="14" viewBox="0 0 256 256" fill="none">
+                                            <path d="M128 0C57.31 0 0 57.31 0 128s57.31 128 128 128 128-57.31 128-128S198.69 0 128 0z" fill="#A6CE39"/>
+                                            <path d="M86.3 186.2H70.9V79.1h15.4v107.1zM78.6 65.6c-5.3 0-9.6-4.3-9.6-9.6s4.3-9.6 9.6-9.6 9.6 4.3 9.6 9.6-4.3 9.6-9.6 9.6zM108.9 79.1h39.8c27.1 0 45.4 18.7 45.4 46.1 0 27.8-18.7 46.5-45.7 46.5h-39.5V79.1zm15.4 78.4h23.4c18.5 0 30.6-11.8 30.6-32.3s-12.1-32.3-30.6-32.3h-23.4v64.6z" fill="#FFF"/>
+                                        </svg>
+                                        <span>Verified ORCID</span>
+                                    </a>
+                                )}
+                            </div>
                             <p className="account-user-subtitle">
                                 {institution ? `${academicRole} • ${institution}` : userEmail}
                             </p>
@@ -192,6 +225,35 @@ export default function AccountModal({
                                     value={institution}
                                     onChange={(e) => setInstitution(e.target.value)}
                                 />
+                            </div>
+
+                            <div className="form-group full-width">
+                                <label className="form-label" htmlFor="orcid-id">
+                                    ORCID iD (Researcher Identifier)
+                                </label>
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <input
+                                        id="orcid-id"
+                                        type="text"
+                                        className="form-input"
+                                        placeholder="0000-0002-1825-0097"
+                                        value={orcidId}
+                                        onChange={(e) => setOrcidId(e.target.value)}
+                                        style={{ fontFamily: 'monospace' }}
+                                    />
+                                    {orcidId && (
+                                        <a
+                                            href={`https://orcid.org/${orcidId.replace(/^https?:\/\/orcid\.org\//i, '')}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="jit-secondary-btn"
+                                            style={{ textDecoration: 'none', whiteSpace: 'nowrap', padding: '0.6rem 0.85rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                                        >
+                                            View ORCID ↗
+                                        </a>
+                                    )}
+                                </div>
+                                <p className="form-hint">Connect your 16-digit ORCID to verify authorship and cite research accurately.</p>
                             </div>
 
                             <div className="form-group full-width">
